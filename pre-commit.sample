@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Git pre-commit hook 範本。
+# 安裝方式：
+#   cp pre-commit.sample .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#
+# 效果：每次 commit 前，依序跑 Compiler（把已核准的草稿編譯進正式層）
+# → Index Builder（重建 TSV 快照）→ Governance Auditor（重新掃描產生提案），
+# 並把新產出的檔案一併加進這次 commit，讓「知識庫狀態」與「索引/提案」永遠同步。
+
+set -e
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+python3 runtime/compiler/compiler.py "$REPO_ROOT"
+python3 runtime/indexer/index_builder.py "$REPO_ROOT"
+python3 runtime/policy/governance_auditor.py "$REPO_ROOT"
+
+git add epistemic/.index/generated/*.tsv \
+        epistemic/1_Entities/*.md epistemic/2_Atoms/*.md epistemic/3_Observations/*.md \
+        epistemic/6_Rejected/*.md epistemic/0_Inbox/*.md epistemic/9_Blind_Spots/*.md \
+        2>/dev/null || true

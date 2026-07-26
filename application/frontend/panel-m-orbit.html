@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>M · 認知地圖 — Activation Orbit</title>
+<style>
+    :root {
+        --bg: #0a091b;
+        --panel: #14132b;
+        --panel-2: #191830;
+        --border: rgba(255,255,255,0.08);
+        --text: #e5e0ff;
+        --text-dim: rgba(255,255,255,0.45);
+        --text-faint: rgba(255,255,255,0.25);
+        --accent: #a78bfa;
+        --accent-2: #f472b6;
+        --strong: #4ade80;
+        --medium: #fbbf24;
+        --weak: #60a5fa;
+        --danger: #f87171;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+        margin: 0; height: 100%; background: var(--bg); color: var(--text);
+        font-family: 'Segoe UI', -apple-system, sans-serif; overflow: hidden;
+    }
+
+    /* ===== 整體 Grid ===== */
+    #app {
+        display: grid;
+        grid-template-areas:
+            "topbar  topbar  topbar"
+            "queue   orbit   explain"
+            "timeline timeline timeline";
+        grid-template-rows: 56px 1fr 132px;
+        grid-template-columns: 240px 1fr 300px;
+        height: 100vh; width: 100vw;
+    }
+    @media (max-width: 900px) {
+        #app {
+            grid-template-areas: "topbar" "orbit" "queue" "explain" "timeline";
+            grid-template-rows: 56px 45vh auto auto auto;
+            grid-template-columns: 1fr;
+            overflow-y: auto; height: auto; min-height: 100vh;
+        }
+    }
+
+    /* ===== Topbar ===== */
+    #topbar {
+        grid-area: topbar; display: flex; align-items: center; gap: 10px;
+        padding: 0 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+        position: relative; z-index: 50;
+    }
+    #topbar .logo { font-size: 13px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+    #search-wrap { position: relative; flex: 1; max-width: 420px; }
+    #search-input {
+        width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+        border-radius: 8px; padding: 8px 12px; color: var(--text); font-family: inherit; font-size: 13px;
+    }
+    #search-input:focus { outline: none; border-color: var(--accent); }
+    #search-results {
+        position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+        background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+        max-height: 320px; overflow-y: auto; display: none; box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    }
+    #search-results.active { display: block; }
+    .search-result-item { padding: 8px 12px; cursor: pointer; font-size: 12px; border-bottom: 1px solid var(--border); }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: rgba(167,139,250,0.1); }
+    .search-result-item .sri-name { color: var(--text); }
+    .search-result-item .sri-meta { color: var(--text-faint); font-size: 10px; margin-left: 6px; }
+    .search-result-group-label { padding: 6px 12px; font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .5px; }
+
+    #topbar-actions { margin-left: auto; display: flex; gap: 8px; }
+    .topbar-btn {
+        background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.3);
+        color: var(--accent); font-family: inherit; font-size: 11px; padding: 7px 12px;
+        border-radius: 7px; cursor: pointer; white-space: nowrap;
+    }
+    .topbar-btn:hover { background: rgba(167,139,250,0.2); }
+    .topbar-btn.governance-hint { border-color: rgba(251,191,36,0.35); color: var(--medium); background: rgba(251,191,36,0.08); }
+    .topbar-btn.governance-hint:hover { background: rgba(251,191,36,0.16); }
+
+    /* ===== Activation Queue（左）===== */
+    #queue {
+        grid-area: queue; background: var(--panel); border-right: 1px solid var(--border);
+        overflow-y: auto; padding: 14px 12px;
+    }
+    #queue h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint); margin: 0 0 10px; }
+    .queue-focus {
+        display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin-bottom: 14px;
+        background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.3); border-radius: 8px;
+    }
+    .queue-focus .qf-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+    .queue-focus .qf-name { font-size: 13px; font-weight: 600; }
+    .queue-section-label {
+        font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin: 14px 0 6px;
+        padding-bottom: 4px; border-bottom: 1px dashed var(--border);
+    }
+    .queue-section-label.strong { color: var(--strong); }
+    .queue-section-label.medium { color: var(--medium); }
+    .queue-section-label.weak   { color: var(--weak); }
+    .queue-item {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-bottom: 2px;
+    }
+    .queue-item:hover { background: rgba(255,255,255,0.05); }
+    .queue-item .qi-conf { font-size: 10px; color: var(--text-faint); }
+    .queue-hidden { font-size: 11px; color: var(--text-faint); margin-top: 10px; cursor: pointer; }
+    .queue-hidden:hover { color: var(--text-dim); }
+    .queue-empty { font-size: 12px; color: var(--text-faint); padding: 10px 0; }
+
+    /* ===== Orbit（中央）===== */
+    #orbit-wrap { grid-area: orbit; position: relative; overflow: hidden; background: radial-gradient(circle at center, #12112a 0%, var(--bg) 75%); }
+    #orbit-canvas { position: absolute; inset: 0; }
+    #orbit-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    #orbit-svg line { stroke: rgba(167,139,250,0.25); stroke-width: 1.2; }
+    #orbit-svg line.hi-conf { stroke: rgba(167,139,250,0.55); }
+    .orbit-node {
+        position: absolute; transform: translate(-50%, -50%); cursor: pointer;
+        background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
+        padding: 8px 12px; font-size: 11px; text-align: center; min-width: 76px;
+        transition: border-color .15s, box-shadow .15s; user-select: none;
+    }
+    .orbit-node:hover { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(167,139,250,0.15); }
+    .orbit-node.is-focus {
+        border-color: var(--accent-2); background: rgba(244,114,182,0.12);
+        box-shadow: 0 0 0 4px rgba(244,114,182,0.15); font-weight: 600;
+    }
+    .orbit-node .on-name { color: var(--text); }
+    .orbit-node .on-type { color: var(--text-faint); font-size: 9px; margin-top: 2px; }
+    #orbit-hint {
+        position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+        font-size: 10px; color: var(--text-faint); background: rgba(0,0,0,0.4);
+        padding: 4px 10px; border-radius: 12px; pointer-events: none;
+    }
+    #orbit-layer-badge {
+        position: absolute; top: 10px; right: 14px; font-size: 10px; color: var(--text-dim);
+        background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 12px;
+    }
+    #orbit-status {
+        position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+        flex-direction: column; gap: 12px; color: var(--text-dim); font-size: 12px; text-align: center;
+    }
+    #orbit-status.hidden { display: none; }
+    #orbit-status .spin {
+        width: 30px; height: 30px; border-radius: 50%; border: 3px solid rgba(167,139,250,0.15);
+        border-top-color: var(--accent); animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== Explain / Runtime（右）===== */
+    #explain {
+        grid-area: explain; background: var(--panel); border-left: 1px solid var(--border);
+        overflow-y: auto; padding: 14px 14px;
+    }
+    #explain h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint); margin: 0 0 10px; }
+    .explain-uncertainty { font-size: 12px; color: var(--medium); margin-bottom: 10px; }
+    .explain-abstain { font-size: 12px; color: var(--text-dim); line-height: 1.7; padding: 10px 0; }
+    .explain-group-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin: 12px 0 5px; }
+    .explain-group-label.support { color: var(--strong); }
+    .explain-group-label.contradiction { color: var(--danger); }
+    .explain-group-label.baseline { color: var(--text-faint); }
+    .explain-obs { font-size: 11px; color: var(--text-dim); padding: 2px 0; }
+    .explain-obs .eo-conf { color: var(--text-faint); }
+    .reasoning-path { font-size: 12px; line-height: 1.8; color: var(--text); word-break: break-word; }
+    .reasoning-path .rp-arrow { color: var(--text-faint); margin: 0 4px; }
+    .reasoning-empty { font-size: 11px; color: var(--text-faint); }
+
+    /* ===== Timeline（底部）===== */
+    #timeline { grid-area: timeline; background: var(--panel); border-top: 1px solid var(--border); padding: 10px 16px; overflow-x: auto; }
+    #timeline-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint); margin-bottom: 8px; }
+    #timeline-track { display: flex; align-items: flex-end; gap: 22px; height: 74px; min-width: max-content; padding-bottom: 4px; }
+    .tl-point { display: flex; flex-direction: column; align-items: center; cursor: pointer; min-width: 46px; }
+    .tl-dot { border-radius: 50%; margin-bottom: 6px; }
+    .tl-epoch { font-size: 9px; color: var(--text-faint); white-space: nowrap; }
+    .tl-empty { font-size: 11px; color: var(--text-faint); }
+    #timeline-detail {
+        font-size: 11px; color: var(--text-dim); margin-top: 6px; min-height: 14px;
+    }
+
+    /* ===== Modal（沿用既有樣式，供筆記抽取／草稿審查用）===== */
+    .modal-overlay {
+        display: none; position: fixed; inset: 0; z-index: 200;
+        background: rgba(0,0,0,0.6); align-items: center; justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+        width: min(560px, 90vw); max-height: 85vh; overflow-y: auto;
+        background: #14132b; border: 1px solid rgba(167,139,250,0.25); border-radius: 14px;
+        padding: 24px; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    #review-modal .modal-box { width: min(680px, 92vw); }
+    .modal-box h2 { font-size: 16px; margin-bottom: 8px; color: #e5e0ff; }
+    .modal-hint { font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.7; margin-bottom: 18px; }
+    .modal-hint code { background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px; }
+    .modal-hint b { color: #fbbf24; }
+    .modal-close {
+        position: absolute; top: 14px; right: 14px; background: none; border: none;
+        color: rgba(255,255,255,0.4); font-size: 18px; cursor: pointer;
+    }
+    .modal-field { margin-bottom: 14px; }
+    .modal-field label { display: block; font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 5px; letter-spacing: .5px; }
+    .modal-field select, .modal-field input, .modal-field textarea {
+        width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px; padding: 9px 12px; color: #e5e0ff; font-family: inherit;
+        font-size: 13px; resize: vertical; box-sizing: border-box;
+    }
+    .modal-field select:focus, .modal-field input:focus, .modal-field textarea:focus {
+        outline: none; border-color: rgba(167,139,250,0.5);
+    }
+    .modal-provider-info {
+        font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 16px;
+        padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 8px;
+    }
+    .modal-provider-info b { color: #a78bfa; }
+    .modal-submit {
+        width: 100%; padding: 11px; border-radius: 8px; border: none;
+        background: linear-gradient(135deg, #a78bfa, #f472b6); color: #14132b;
+        font-weight: 600; font-size: 13px; cursor: pointer;
+    }
+    .modal-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+    #extract-result, #review-compile-result { margin-top: 16px; font-size: 12px; }
+    .er-ok   { color: #4ade80; margin-bottom: 6px; }
+    .er-warn { color: #fbbf24; margin-bottom: 4px; }
+    .er-err  { color: #f87171; }
+    .er-info { color: rgba(255,255,255,0.4); margin-top: 8px; line-height: 1.6; }
+
+    #review-empty { font-size: 12px; color: rgba(255,255,255,0.3); padding: 20px 0; text-align: center; }
+    .review-item {
+        border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+        padding: 12px 14px; margin-bottom: 10px; background: rgba(255,255,255,0.02);
+    }
+    .review-item.is-approved { border-color: rgba(74,222,128,0.35); background: rgba(74,222,128,0.04); }
+    .review-item-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .review-type-badge {
+        font-size: 10px; padding: 2px 8px; border-radius: 10px; text-transform: uppercase;
+        letter-spacing: .5px; font-weight: 600;
+    }
+    .review-type-badge.type-entity      { background: rgba(96,165,250,0.15); color: #60a5fa; }
+    .review-type-badge.type-atom        { background: rgba(167,139,250,0.15); color: #a78bfa; }
+    .review-type-badge.type-observation { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .review-type-badge.type-source      { background: rgba(244,114,182,0.15); color: #f472b6; }
+    .review-item-summary { font-size: 13px; color: #e5e0ff; flex: 1; }
+    .review-item-status { font-size: 11px; color: rgba(255,255,255,0.35); }
+    .review-item-status.approved { color: #4ade80; }
+    .review-item-actions { display: flex; gap: 8px; margin-top: 8px; }
+    .review-item-actions button {
+        font-size: 11px; padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.7); cursor: pointer; font-family: inherit;
+    }
+    .review-item-actions button.btn-approve:hover { border-color: #4ade80; color: #4ade80; }
+    .review-item-actions button.btn-reject:hover  { border-color: #f87171; color: #f87171; }
+    .review-item-detail {
+        display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.08);
+        font-size: 11px; color: rgba(255,255,255,0.5); white-space: pre-wrap; max-height: 200px; overflow-y: auto;
+        font-family: 'Consolas', monospace;
+    }
+    .review-item-detail.active { display: block; }
+</style>
+</head>
+<body>
+
+<div id="app">
+    <div id="topbar">
+        <div class="logo">⚡ Activation Orbit</div>
+        <div id="search-wrap">
+            <input id="search-input" type="text" placeholder="🔍 搜尋任何 Entity…" autocomplete="off">
+            <div id="search-results"></div>
+        </div>
+        <div id="topbar-actions">
+            <button class="topbar-btn governance-hint" id="governance-btn" onclick="openReviewModal()" style="display:none;"></button>
+            <button class="topbar-btn" onclick="openExtractModal()">📝 筆記抽取</button>
+            <button class="topbar-btn" onclick="openReviewModal()">📋 審查草稿</button>
+        </div>
+    </div>
+
+    <div id="queue">
+        <h3>Activation Queue</h3>
+        <div class="queue-focus"><div class="qf-dot"></div><div class="qf-name" id="queue-focus-name">—</div></div>
+        <div id="queue-body"><div class="queue-empty">載入中…</div></div>
+    </div>
+
+    <div id="orbit-wrap">
+        <svg id="orbit-svg"></svg>
+        <div id="orbit-canvas"></div>
+        <div id="orbit-layer-badge">Layer 0</div>
+        <div id="orbit-hint">滾輪：展開/收合層數　點卡片：切換焦點</div>
+        <div id="orbit-status"><div class="spin"></div><div id="orbit-status-msg">正在讀取認知圖譜…</div></div>
+    </div>
+
+    <div id="explain">
+        <h3>Runtime</h3>
+        <div id="explain-body"><div class="reasoning-empty">選一個實體看看系統怎麼判斷它。</div></div>
+    </div>
+
+    <div id="timeline">
+        <div id="timeline-label">Timeline</div>
+        <div id="timeline-track"><div class="tl-empty">—</div></div>
+        <div id="timeline-detail"></div>
+    </div>
+</div>
+
+<!-- ====== 筆記抽取 Modal ====== -->
+<div id="extract-modal" class="modal-overlay">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeExtractModal()">✕</button>
+        <h2>📝 把筆記抽取成候選知識</h2>
+        <p class="modal-hint">
+            用 LLM 讀你的筆記，抽取候選 Entity/Atom/Observation，寫成<b>未核准</b>的草稿到
+            <code>epistemic/0_Inbox/</code>——不會自動變成正式知識庫的一部分，你要自己審查、
+            核准，再跑 Compiler 才會出現在 Orbit 上。
+        </p>
+        <div class="modal-field">
+            <label>來源</label>
+            <select id="extract-source-select" onchange="onExtractSourceChange()">
+                <option value="__manual__">✏️ 直接輸入文字</option>
+            </select>
+        </div>
+        <div class="modal-field">
+            <label>標題</label>
+            <input type="text" id="extract-title-input" placeholder="（選填，預設用文字前 30 字）">
+        </div>
+        <div class="modal-field">
+            <label>內容</label>
+            <textarea id="extract-text-area" rows="8" placeholder="貼上或輸入筆記內容…"></textarea>
+        </div>
+        <div class="modal-provider-info" id="extract-provider-info"></div>
+        <button class="modal-submit" id="extract-submit-btn" onclick="submitExtraction()">開始抽取</button>
+        <div id="extract-result"></div>
+    </div>
+</div>
+
+<!-- ====== 草稿審查 Modal ====== -->
+<div id="review-modal" class="modal-overlay">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeReviewModal()">✕</button>
+        <h2>📋 審查 0_Inbox/ 草稿</h2>
+        <p class="modal-hint">
+            核准（✔）不會馬上生效，核准完按最下面「編譯已核准的草稿」才會真的驗證、
+            寫進正式的 <code>epistemic/</code> 四層；拒絕（✕）會把草稿搬進
+            <code>6_Rejected/</code> 並附上原因，不是直接刪除。
+        </p>
+        <div id="review-list"></div>
+        <div id="review-empty" style="display:none;">目前 0_Inbox/ 沒有待審查的草稿。</div>
+        <button class="modal-submit" id="review-compile-btn" onclick="runCompile()">編譯已核准的草稿</button>
+        <div id="review-compile-result"></div>
+    </div>
+</div>
+
+<script type="module">
+
+// ============================================================
+//  API 位址（沿用 HUD 設定裡的 api_server，沒有就用預設值）
+// ============================================================
+const API_BASE = (() => {
+    try {
+        const cfg = JSON.parse(localStorage.getItem('llm-wiki-config') || '{}');
+        return cfg.api_server || 'http://localhost:3001';
+    } catch { return 'http://localhost:3001'; }
+})();
+
+function getAiConfig() {
+    try { return JSON.parse(localStorage.getItem('llm-wiki-config') || '{}'); }
+    catch { return {}; }
+}
+
+// ============================================================
+//  全域狀態
+// ============================================================
+let focusUid = null;        // 目前 Orbit 焦點
+let searchOrigin = null;    // 最後一次「搜尋」設定的起點，只有下一次搜尋才會重置
+let currentLayer = 2;       // 目前展開到第幾層（滾輪 +/-1，不是縮放）
+const MAX_LAYER_CLIENT = 6; // 用戶端上限，伺服器端 policy.yaml 的 max_layer 是真正的硬上限
+
+// ============================================================
+//  小工具
+// ============================================================
+async function fetchJson(path) {
+    const res = await fetch(API_BASE + path);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || data.error || ('HTTP ' + res.status));
+    return data;
+}
+
+function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+const TYPE_COLOR_CACHE = {};
+function colorForType(type) {
+    if (TYPE_COLOR_CACHE[type]) return TYPE_COLOR_CACHE[type];
+    let hash = 0;
+    for (let i = 0; i < String(type).length; i++) hash = (hash * 31 + type.charCodeAt(i)) >>> 0;
+    const color = `hsl(${hash % 360}, 60%, 68%)`;
+    TYPE_COLOR_CACHE[type] = color;
+    return color;
+}
+
+// ============================================================
+//  Orbit：載入 + 佈局 + 畫圖
+// ============================================================
+async function loadOrbit(uid, { isNewSearch = false } = {}) {
+    focusUid = uid;
+    if (isNewSearch) searchOrigin = uid;
+
+    document.getElementById('orbit-status').classList.remove('hidden');
+    document.getElementById('orbit-status-msg').textContent = '正在讀取認知圖譜…';
+
+    try {
+        const data = await fetchJson(`/api/epistemic/orbit/${encodeURIComponent(uid)}?max_layer=${currentLayer}`);
+        renderOrbit(data);
+        document.getElementById('orbit-status').classList.add('hidden');
+        document.getElementById('orbit-layer-badge').textContent = `Layer 0–${data.layers.length - 1}`;
+        document.getElementById('queue-focus-name').textContent = data.center.name;
+        renderQueue(data.queue);
+    } catch (e) {
+        document.getElementById('orbit-status-msg').innerHTML =
+            `無法讀取：<b>${escapeHtml(e.message)}</b><br><span style="opacity:.6;font-size:11px">確認 Python/Node 服務都已啟動</span>`;
+        return;
+    }
+
+    // Explain / Timeline 跟著焦點換；loadReasoningPath 特意放在 loadExplain 內部、
+    // DOM 元素建好之後才呼叫（不是在這裡並行呼叫）——見 loadExplain() 結尾的說明。
+    loadExplain(uid);
+    loadTimeline(uid);
+}
+
+function renderOrbit(data) {
+    const canvas = document.getElementById('orbit-canvas');
+    const svg = document.getElementById('orbit-svg');
+    canvas.innerHTML = '';
+    svg.innerHTML = '';
+
+    const rect = document.getElementById('orbit-wrap').getBoundingClientRect();
+    const cx = rect.width / 2, cy = rect.height / 2;
+    const ringSpacing = Math.max(60, Math.min(cx, cy) / (data.layers.length || 1) * 0.82);
+
+    const positions = {};
+    data.layers.forEach((layerNodes, layerIdx) => {
+        if (layerIdx === 0) {
+            if (layerNodes[0]) positions[layerNodes[0].uid] = { x: cx, y: cy };
+            return;
+        }
+        const radius = layerIdx * ringSpacing;
+        const n = layerNodes.length;
+        layerNodes.forEach((node, i) => {
+            const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+            positions[node.uid] = { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
+        });
+    });
+
+    // 連線（先畫，疊在卡片下面）
+    for (const edge of data.edges) {
+        const a = positions[edge.from], b = positions[edge.to];
+        if (!a || !b) continue;
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
+        line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
+        if (edge.score >= 0.6) line.setAttribute('class', 'hi-conf');
+        svg.appendChild(line);
+    }
+
+    // 節點卡片
+    data.layers.forEach((layerNodes) => {
+        for (const node of layerNodes) {
+            const pos = positions[node.uid];
+            if (!pos) continue;
+            const div = document.createElement('div');
+            div.className = 'orbit-node' + (node.uid === data.center.uid ? ' is-focus' : '');
+            div.style.left = pos.x + 'px';
+            div.style.top = pos.y + 'px';
+            div.style.borderTopColor = colorForType(node.type);
+            div.innerHTML = `<div class="on-name">${escapeHtml(node.name)}</div><div class="on-type">${escapeHtml(node.type)}</div>`;
+            div.addEventListener('click', () => loadOrbit(node.uid));
+            canvas.appendChild(div);
+        }
+    });
+}
+
+function onOrbitWheel(ev) {
+    ev.preventDefault();
+    const delta = ev.deltaY > 0 ? 1 : -1;
+    const next = Math.max(1, Math.min(MAX_LAYER_CLIENT, currentLayer + delta));
+    if (next === currentLayer) return;
+    currentLayer = next;
+    if (focusUid) loadOrbit(focusUid);
+}
+
+window.addEventListener('resize', () => { if (focusUid) loadOrbit(focusUid); });
+
+// ============================================================
+//  Activation Queue（左側面板）
+// ============================================================
+function renderQueue(queue) {
+    const body = document.getElementById('queue-body');
+    const sections = [
+        { key: 'strong', label: 'Strong', cls: 'strong' },
+        { key: 'medium', label: 'Medium', cls: 'medium' },
+        { key: 'weak', label: 'Weak', cls: 'weak' },
+    ];
+    let html = '';
+    let any = false;
+    for (const s of sections) {
+        const items = queue[s.key] || [];
+        if (!items.length) continue;
+        any = true;
+        html += `<div class="queue-section-label ${s.cls}">${s.label}</div>`;
+        html += items.map(it => `
+            <div class="queue-item" onclick="loadOrbit('${it.uid}')">
+                <span>${escapeHtml(it.name)}</span>
+                <span class="qi-conf">${it.path_confidence}</span>
+            </div>
+        `).join('');
+    }
+    if (!any) html = '<div class="queue-empty">這個焦點目前沒有可展開的關聯。</div>';
+    if (queue.hidden_count > 0) {
+        html += `<div class="queue-hidden">Hidden (${queue.hidden_count})</div>`;
+    }
+    body.innerHTML = html;
+}
+window.loadOrbit = loadOrbit;
+
+// ============================================================
+//  Explain / Runtime（右側面板）
+// ============================================================
+async function loadExplain(uid) {
+    const body = document.getElementById('explain-body');
+    body.innerHTML = '<div class="reasoning-empty">載入中…</div>';
+    try {
+        const d = await fetchJson(`/api/epistemic/explain/${encodeURIComponent(uid)}`);
+        if (d.abstained) {
+            body.innerHTML =
+                `<div class="explain-abstain">系統棄權：目前證據不足以支撐可靠判斷（uncertainty ${d.uncertainty}）。</div>` +
+                `<div class="explain-group-label" style="color:var(--text-faint)">Reasoning</div>` +
+                `<div class="reasoning-path" id="reasoning-path-inline"><span class="reasoning-empty">載入中…</span></div>`;
+            loadReasoningPath();  // 同樣要等 DOM 寫進去之後才呼叫，見下面 non-abstained 分支的說明
+            return;
+        }
+        const group = (label, cls, items) => {
+            if (!items.length) return '';
+            return `<div class="explain-group-label ${cls}">${label}（${items.length}）</div>` +
+                items.map(o => `<div class="explain-obs">${escapeHtml(o.obs)} <span class="eo-conf">conf ${o.confidence ?? '—'}</span></div>`).join('');
+        };
+        body.innerHTML =
+            `<div class="explain-uncertainty">不確定性：${d.uncertainty}</div>` +
+            group('Support', 'support', d.support) +
+            group('Contradiction', 'contradiction', d.contradiction) +
+            group('Baseline', 'baseline', d.baseline) +
+            `<div class="explain-group-label" style="color:var(--text-faint)">Reasoning</div>` +
+            `<div class="reasoning-path" id="reasoning-path-inline"><span class="reasoning-empty">載入中…</span></div>`;
+        // 一定要等上面這行把 #reasoning-path-inline 寫進 DOM 之後才呼叫，
+        // 不能在 loadOrbit() 裡跟 loadExplain() 並行呼叫——那樣這個 element 有時候還不存在
+        // （之前踩過這個時序 bug：Explain 的 fetch 比較慢時，找不到元素直接變成 no-op）。
+        loadReasoningPath();
+    } catch (e) {
+        body.innerHTML = `<div class="er-err">載入失敗：${escapeHtml(e.message)}</div>`;
+    }
+}
+
+async function loadReasoningPath() {
+    const el = document.getElementById('reasoning-path-inline');
+    if (!el) return;
+    if (!searchOrigin || searchOrigin === focusUid) {
+        el.innerHTML = '<span class="reasoning-empty">（從搜尋一個實體開始，才會顯示推理鏈）</span>';
+        return;
+    }
+    try {
+        const d = await fetchJson(`/api/epistemic/reasoning-path?from=${encodeURIComponent(searchOrigin)}&to=${encodeURIComponent(focusUid)}`);
+        if (!d.found) {
+            el.innerHTML = '<span class="reasoning-empty">找不到路徑（兩個實體在圖譜上不連通）</span>';
+            return;
+        }
+        el.innerHTML = d.path.map(p => escapeHtml(p.name)).join('<span class="rp-arrow">→</span>');
+    } catch (e) {
+        el.innerHTML = `<span class="reasoning-empty">載入失敗：${escapeHtml(e.message)}</span>`;
+    }
+}
+
+// ============================================================
+//  Timeline（底部）
+// ============================================================
+async function loadTimeline(uid) {
+    const track = document.getElementById('timeline-track');
+    const detail = document.getElementById('timeline-detail');
+    detail.textContent = '';
+    track.innerHTML = '<div class="tl-empty">載入中…</div>';
+    try {
+        const d = await fetchJson(`/api/epistemic/timeline/${encodeURIComponent(uid)}`);
+        if (!d.timeline.length) {
+            track.innerHTML = '<div class="tl-empty">沒有觀測紀錄。</div>';
+            return;
+        }
+        track.innerHTML = d.timeline.map(t => {
+            const total = t.support + t.contradict + t.neutral;
+            const size = Math.min(22, 10 + total * 3);
+            const color = t.support > t.contradict ? 'var(--strong)' : t.contradict > t.support ? 'var(--danger)' : 'var(--weak)';
+            return `
+                <div class="tl-point" onclick="showTimelinePoint('${escapeHtml(t.epoch)}', ${t.support}, ${t.contradict}, ${t.neutral})">
+                    <div class="tl-dot" style="width:${size}px;height:${size}px;background:${color}"></div>
+                    <div class="tl-epoch">${escapeHtml(t.epoch)}</div>
+                </div>`;
+        }).join('');
+    } catch (e) {
+        track.innerHTML = `<div class="tl-empty">載入失敗：${escapeHtml(e.message)}</div>`;
+    }
+}
+
+window.showTimelinePoint = (epoch, support, contradict, neutral) => {
+    document.getElementById('timeline-detail').textContent =
+        `${epoch}：支持 ${support}、反駁 ${contradict}、中性 ${neutral}`;
+};
+
+// ============================================================
+//  搜尋
+// ============================================================
+let searchDebounce = null;
+async function onSearchInput() {
+    const q = document.getElementById('search-input').value.trim();
+    clearTimeout(searchDebounce);
+    if (!q) { document.getElementById('search-results').classList.remove('active'); return; }
+    searchDebounce = setTimeout(async () => {
+        try {
+            const d = await fetchJson(`/api/epistemic/search?q=${encodeURIComponent(q)}`);
+            renderSearchResults(d);
+        } catch (e) {
+            document.getElementById('search-results').innerHTML = `<div class="search-result-item er-err">${escapeHtml(e.message)}</div>`;
+            document.getElementById('search-results').classList.add('active');
+        }
+    }, 250);
+}
+
+function renderSearchResults(d) {
+    const el = document.getElementById('search-results');
+    if (!d.entities.length && !d.atoms.length) {
+        el.innerHTML = '<div class="search-result-item">沒有符合的結果</div>';
+        el.classList.add('active');
+        return;
+    }
+    let html = '';
+    if (d.entities.length) {
+        html += '<div class="search-result-group-label">Entities</div>';
+        html += d.entities.map(e => `
+            <div class="search-result-item" onclick="selectSearchResult('${e.uid}')">
+                <span class="sri-name">${escapeHtml(e.name)}</span>
+                <span class="sri-meta">${escapeHtml(e.type)}${e.domains.length ? ' · ' + escapeHtml(e.domains.join(', ')) : ''}</span>
+            </div>`).join('');
+    }
+    if (d.atoms.length) {
+        html += '<div class="search-result-group-label">Atoms</div>';
+        html += d.atoms.map(a => `
+            <div class="search-result-item" onclick="selectSearchResult('${a.from}')">
+                <span class="sri-name">${escapeHtml(a.from_name)} → ${escapeHtml(a.to_name)}</span>
+                <span class="sri-meta">${escapeHtml(a.type)} · ${a.score}${a.stale ? ' · ⚠stale' : ''}</span>
+            </div>`).join('');
+    }
+    el.innerHTML = html;
+    el.classList.add('active');
+}
+
+window.selectSearchResult = (uid) => {
+    document.getElementById('search-results').classList.remove('active');
+    document.getElementById('search-input').value = '';
+    loadOrbit(uid, { isNewSearch: true });
+};
+
+document.addEventListener('click', (ev) => {
+    if (!ev.target.closest('#search-wrap')) document.getElementById('search-results').classList.remove('active');
+});
+
+// ============================================================
+//  治理提示（頂欄小按鈕，不做獨立儀表板頁面）
+// ============================================================
+async function loadGovernanceHint() {
+    try {
+        const d = await fetchJson('/api/epistemic/governance-summary');
+        const btn = document.getElementById('governance-btn');
+        const total = (d.debt_count || 0) + (d.mediation_count || 0);
+        if (total > 0) {
+            btn.textContent = `⚠ ${d.debt_count} 個知識債務、${d.mediation_count} 個矛盾提案`;
+            btn.style.display = '';
+        }
+    } catch (e) { /* 治理提示載入失敗不影響主功能，安靜略過 */ }
+}
+
+// ============================================================
+//  筆記抽取 Modal（沿用既有邏輯）
+// ============================================================
+async function openExtractModal() {
+    document.getElementById('extract-modal').classList.add('active');
+    document.getElementById('extract-result').innerHTML = '';
+    document.getElementById('extract-text-area').value = '';
+    document.getElementById('extract-title-input').value = '';
+
+    const cfg = getAiConfig();
+    const providerInfo = document.getElementById('extract-provider-info');
+    const provider = cfg.ai_provider || 'anthropic';
+    const labels = { anthropic: 'Anthropic', openai: 'OpenAI', llama: 'llama.cpp（本機）', custom: '自訂端點' };
+    if (provider === 'llama') {
+        providerInfo.innerHTML = `目前使用：<b>llama.cpp</b>（本機）　${cfg.llama_host || 'http://127.0.0.1'}:${cfg.llama_port || '8080'}`;
+    } else {
+        providerInfo.innerHTML = `目前使用：<b>${labels[provider] || provider}</b>　<span style="opacity:.6">要換 LLM 到設定頁調整</span>`;
+    }
+
+    const select = document.getElementById('extract-source-select');
+    select.innerHTML = '<option value="__manual__">✏️ 直接輸入文字</option>';
+    try {
+        const res = await fetch(API_BASE + '/api/notes');
+        if (res.ok) {
+            const data = await res.json();
+            for (const n of (data.notes || [])) {
+                const opt = document.createElement('option');
+                opt.value = n.filename;
+                opt.textContent = `${n.filename}${n.preview ? '　—　' + n.preview : ''}`;
+                select.appendChild(opt);
+            }
+        }
+    } catch (e) {}
+}
+function closeExtractModal() { document.getElementById('extract-modal').classList.remove('active'); }
+
+async function onExtractSourceChange() {
+    const select = document.getElementById('extract-source-select');
+    const textarea = document.getElementById('extract-text-area');
+    const titleInput = document.getElementById('extract-title-input');
+    const filename = select.value;
+    if (filename === '__manual__') { textarea.value = ''; textarea.readOnly = false; return; }
+    textarea.readOnly = true; textarea.value = '讀取中…';
+    try {
+        const res = await fetch(API_BASE + '/api/notes/' + encodeURIComponent(filename));
+        const data = await res.json();
+        textarea.value = data.content || '';
+        if (!titleInput.value) titleInput.value = filename.replace(/\.md$/, '');
+    } catch (e) { textarea.value = '（讀取失敗：' + (e.message || e) + '）'; }
+    finally { textarea.readOnly = false; }
+}
+
+async function submitExtraction() {
+    const text = document.getElementById('extract-text-area').value.trim();
+    const title = document.getElementById('extract-title-input').value.trim();
+    const resultEl = document.getElementById('extract-result');
+    const btn = document.getElementById('extract-submit-btn');
+    if (!text) { resultEl.innerHTML = '<div class="er-err">請輸入或選擇筆記內容</div>'; return; }
+
+    btn.disabled = true; btn.textContent = '抽取中…';
+    resultEl.innerHTML = '<div class="er-info">呼叫 LLM 中，視內容長度可能要幾秒到幾十秒…</div>';
+    try {
+        const res = await fetch(API_BASE + '/api/epistemic/extract', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, title, ai_config: getAiConfig() }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            resultEl.innerHTML = `<div class="er-err">抽取失敗：${escapeHtml(data.detail || data.error || ('HTTP ' + res.status))}</div>`;
+            return;
+        }
+        const c = data.created || {};
+        let html = `<div class="er-ok">✔ 完成：新建 Entity ${c.entity?.length||0} 筆、Atom ${c.atom?.length||0} 筆、Observation ${c.observation?.length||0} 筆、Source ${c.source?.length||0} 筆</div>`;
+        if (data.warnings?.length) html += data.warnings.map(w => `<div class="er-warn">⚠ ${escapeHtml(w)}</div>`).join('');
+        html += `<div class="er-info">摘要檔案：${escapeHtml(data.summary)}<br>點左上「📋 審查草稿」逐一檢查、核准，核准完按「編譯」才會出現在 Orbit 上。</div>`;
+        resultEl.innerHTML = html;
+    } catch (e) { resultEl.innerHTML = `<div class="er-err">抽取失敗：${escapeHtml(e.message)}</div>`; }
+    finally { btn.disabled = false; btn.textContent = '開始抽取'; }
+}
+
+// ============================================================
+//  草稿審查 Modal（沿用既有邏輯）
+// ============================================================
+async function openReviewModal() {
+    document.getElementById('review-modal').classList.add('active');
+    document.getElementById('review-compile-result').innerHTML = '';
+    await loadReviewList();
+}
+function closeReviewModal() { document.getElementById('review-modal').classList.remove('active'); }
+
+const TYPE_LABELS = { entity: 'Entity', atom: 'Atom', observation: 'Observation', source: 'Source' };
+function cssEscape(s) { return s.replace(/[^a-zA-Z0-9_-]/g, '_'); }
+
+async function loadReviewList() {
+    const listEl = document.getElementById('review-list');
+    const emptyEl = document.getElementById('review-empty');
+    listEl.innerHTML = '<div class="er-info">載入中…</div>';
+    try {
+        const res = await fetch(API_BASE + '/api/epistemic/inbox');
+        const data = await res.json();
+        const drafts = data.drafts || [];
+        if (!drafts.length) { listEl.innerHTML = ''; emptyEl.style.display = 'block'; return; }
+        emptyEl.style.display = 'none';
+        listEl.innerHTML = drafts.map(d => `
+            <div class="review-item ${d.approved ? 'is-approved' : ''}" data-filename="${d.filename}">
+                <div class="review-item-header">
+                    <span class="review-type-badge type-${d.draft_type}">${TYPE_LABELS[d.draft_type] || d.draft_type}</span>
+                    <span class="review-item-summary">${escapeHtml(d.summary)}</span>
+                    <span class="review-item-status ${d.approved ? 'approved' : ''}">${d.approved ? '✔ 已核准' : '待審查'}</span>
+                </div>
+                <div class="review-item-actions">
+                    <button class="btn-approve" onclick="approveDraft('${d.filename}')" ${d.approved ? 'disabled' : ''}>✔ 核准</button>
+                    <button class="btn-reject" onclick="rejectDraft('${d.filename}')">✕ 拒絕</button>
+                    <button onclick="toggleDraftDetail('${d.filename}')">查看內容</button>
+                </div>
+                <div class="review-item-detail" id="detail-${cssEscape(d.filename)}"></div>
+            </div>
+        `).join('');
+    } catch (e) { listEl.innerHTML = `<div class="er-err">載入失敗：${escapeHtml(e.message)}</div>`; }
+}
+
+async function toggleDraftDetail(filename) {
+    const el = document.getElementById('detail-' + cssEscape(filename));
+    if (el.classList.contains('active')) { el.classList.remove('active'); return; }
+    if (!el.textContent) {
+        el.textContent = '載入中…';
+        try {
+            const res = await fetch(API_BASE + '/api/epistemic/inbox/' + encodeURIComponent(filename));
+            const data = await res.json();
+            el.textContent = data.raw || '（沒有內容）';
+        } catch (e) { el.textContent = '載入失敗：' + (e.message || e); }
+    }
+    el.classList.add('active');
+}
+
+async function approveDraft(filename) {
+    try {
+        const res = await fetch(API_BASE + '/api/epistemic/inbox/' + encodeURIComponent(filename) + '/approve', { method: 'POST' });
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || err.error || ('HTTP ' + res.status)); }
+        await loadReviewList();
+    } catch (e) { alert('核准失敗：' + (e.message || e)); }
+}
+
+async function rejectDraft(filename) {
+    const reason = prompt('拒絕原因（選填，會記錄在 6_Rejected/ 裡）：', '') || '';
+    try {
+        const res = await fetch(API_BASE + '/api/epistemic/inbox/' + encodeURIComponent(filename) + '/reject', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }),
+        });
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || err.error || ('HTTP ' + res.status)); }
+        await loadReviewList();
+    } catch (e) { alert('拒絕失敗：' + (e.message || e)); }
+}
+
+async function runCompile() {
+    const btn = document.getElementById('review-compile-btn');
+    const resultEl = document.getElementById('review-compile-result');
+    btn.disabled = true; btn.textContent = '編譯中…'; resultEl.innerHTML = '';
+    try {
+        const res = await fetch(API_BASE + '/api/epistemic/compile', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || data.error || ('HTTP ' + res.status));
+        const compiled = data.compiled || [], rejected = data.rejected || [];
+        let html = `<div class="er-ok">✔ 編譯完成：成功 ${compiled.length} 筆${rejected.length ? `，失敗 ${rejected.length} 筆` : ''}</div>`;
+        if (rejected.length) html += rejected.map(([uid, missing]) => `<div class="er-err">✘ ${escapeHtml(uid)}：缺 ${Array.isArray(missing) ? missing.join(', ') : missing}</div>`).join('');
+        if (compiled.length) html += `<div class="er-info">編譯成功的項目重新整理頁面就會出現在 Orbit 裡。</div>`;
+        resultEl.innerHTML = html;
+        await loadReviewList();
+        await loadGovernanceHint();
+    } catch (e) { resultEl.innerHTML = `<div class="er-err">編譯失敗：${escapeHtml(e.message)}</div>`; }
+    finally { btn.disabled = false; btn.textContent = '編譯已核准的草稿'; }
+}
+
+// ============================================================
+//  把 inline onclick/onchange 用到的函式掛到 window 上
+//  ------------------------------------------------------------
+//  這個檔案的 <script type="module"> 裡，頂層 function 宣告只在模組自己的作用域裡，
+//  不會自動變成 window.xxx；但 HTML 屬性寫的 onclick="openExtractModal()" 是在
+//  全域作用域執行，找不到模組裡的函式就會靜默失敗（按了完全沒反應，主控台會有
+//  "xxx is not defined"）。這是先前 panel-m-map.html 開發時踩過的坑，這裡從一開始
+//  就把清單列好，新增按鈕記得也要加進來。
+// ============================================================
+window.openExtractModal = openExtractModal;
+window.closeExtractModal = closeExtractModal;
+window.onExtractSourceChange = onExtractSourceChange;
+window.submitExtraction = submitExtraction;
+window.openReviewModal = openReviewModal;
+window.closeReviewModal = closeReviewModal;
+window.toggleDraftDetail = toggleDraftDetail;
+window.approveDraft = approveDraft;
+window.rejectDraft = rejectDraft;
+window.runCompile = runCompile;
+
+// ============================================================
+//  初始化
+// ============================================================
+document.getElementById('search-input').addEventListener('input', onSearchInput);
+document.getElementById('orbit-wrap').addEventListener('wheel', onOrbitWheel, { passive: false });
+
+async function init() {
+    loadGovernanceHint();
+    // 預設焦點：拿第一個存在的 Entity 當起點（不用使用者手動搜尋才有東西可看）
+    try {
+        const d = await fetchJson('/api/epistemic/search?q=');
+        if (d.entities.length) {
+            loadOrbit(d.entities[0].uid, { isNewSearch: true });
+        } else {
+            document.getElementById('orbit-status-msg').textContent = 'epistemic/1_Entities/ 目前是空的，先用「📝 筆記抽取」建一些知識吧。';
+        }
+    } catch (e) {
+        document.getElementById('orbit-status-msg').innerHTML =
+            `無法連線：<b>${escapeHtml(e.message)}</b><br><span style="opacity:.6;font-size:11px">確認 Python/Node 服務都已啟動（npm run dev:all）</span>`;
+    }
+}
+init();
+
+</script>
+</body>
+</html>

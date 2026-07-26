@@ -1,0 +1,75 @@
+# runtime/policy/policy.yaml
+# 系統規則的「機器可讀」版本。epistemic/8_Governance.md 是給人看的說明文件，
+# 本檔案是給 runtime/ 底下所有模組讀取的實際參數來源（Policy Engine 的資料本體）。
+# 兩者必須保持同步——目前靠人工同步（見 epistemic/8_Governance.md 第 7 節）。
+# 若要自動化 drift-check，可在 runtime/policy/policy_engine.py 中新增規則解析器，
+# 目前版本尚未實作，故此處不做此宣稱。
+
+version: 1
+
+# 1. 信心衰減政策：不同 Atom.type 的「derived confidence」上限
+#    （代表由該類型關係推導出的信心，永遠不能超過此值，
+#     即使底層 observation 的 confidence.value 更高）
+confidence_decay:
+  derived_cap:
+    causal: 0.60
+    correlation: 0.50
+    definition: 0.95
+    constraint: 0.85
+    heuristic: 0.45
+    analogy: 0.35
+
+# 2. 證據獨立性規則
+evidence_independence:
+  dedup_key: source_fingerprint   # 以 source_fingerprint 去重，而非 observation 篇數
+  min_independent_sources_for_high_confidence: 2
+
+# 3. 棄權（abstention）門檻
+abstention:
+  min_path_confidence: 0.40         # Path Confidence < 0.4 -> 強制棄權
+  min_activated_observations: 2     # 激活的 observation < 2 筆 -> 強制棄權
+  min_context_match_ratio: 0.60     # context 5 維度匹配 < 60% -> 強制棄權
+  fallback_mode: baseline           # 不足時退化為「歷史基線」模式
+
+# 4. 調解提案（mediation proposal）觸發門檻
+mediation_trigger:
+  min_conflicting_observations: 5   # 同一 Atom 下 support+contradict 總數 > 5
+  min_time_span_months: 18          # 且觀測時間跨度 >= 18 個月
+
+# 5. 生命週期自動審查規則（債務報告）
+lifecycle_review:
+  stale_after_months: 24            # 最後一筆 support observation 超過此月數
+  applies_to_types: [causal, heuristic]
+
+# 6. Path Confidence 計算方式（供 activation_engine.py 使用）
+path_confidence:
+  method: min_times_depth_penalty
+  depth_penalty_per_hop: 0.90        # 每多一跳關係，信心乘以此係數
+
+# 7. 治理審查週期（人類，非自動化，僅供 auditor 提醒用）
+governance_review_cycle_months: 12
+
+# 8. Correlation Engine：跨筆記關聯分析（runtime/correlation/correlation_engine.py）
+correlation_engine:
+  # 三個維度的權重，加總理論上不用等於 1，但建議維持在 1 附近，分數才好解讀
+  weights:
+    entity_overlap: 0.3    # 兩篇筆記提到的既有 Entity，交集/聯集比例
+    graph_distance: 0.5    # 兩篇筆記的核心實體，在 epistemic 圖譜上的最短路徑
+    stance: 0.2            # LLM 判斷兩篇筆記是強化/互補/中性/矛盾
+  max_graph_hops: 5        # 超過這個跳數不算「有關聯」，graph_distance 分數直接給 0
+  proposal_threshold: 0.4  # 綜合分數超過這個值，才會在 0_Inbox/ 產生新 Atom 提案
+  # stance 判斷用的四種標籤，對應到不同的立場分數（給 LLM 選，不是自由文字）
+  stance_labels:
+    contradict:    0.1
+    neutral:       0.4
+    reinforce:     0.7
+    complementary: 0.9
+
+# 9. Activation Queue：M 面板 Orbit 介面用（依 Path Confidence 分桶 Strong/Medium/Weak/Hidden）
+#    跟 correlation_engine 的 max_graph_hops 是兩回事：這裡是「以焦點實體為中心，
+#    往外展開幾層 Orbit」的上限，用來畫 Layer 0/1/2/3...，不是判斷兩篇筆記關不關聯。
+activation_queue:
+  strong_min: 0.70   # Path Confidence >= 0.70 → Strong（對應 abstention 的「可以直接回答」邊界）
+  medium_min: 0.40   # 0.40~0.70 → Medium（對應 abstention 的「需附警語」邊界）
+  weak_min: 0.15     # 0.15~0.40 → Weak；< 0.15 直接算 Hidden，不列進 Queue（低於雜訊門檻）
+  max_layer: 4       # Orbit 最多展開幾層（滑鼠滾輪 Layer+1 的上限，避免無限展開）

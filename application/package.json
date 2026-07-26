@@ -1,0 +1,55 @@
+{
+  "name": "llm-wiki",
+  "version": "1.0.0",
+  "description": "人機協作知識管理系統 — Markdown SSOT + HUD 介面 + 代碼 I/O 週期表",
+  "license": "CC BY-NC-SA 4.0",
+  "author": "LLM WIKI Contributors",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "wiki": "./cli/wiki.ts"
+  },
+  "scripts": {
+    "dev": "tsx backend/server.ts",
+    "dev:all": "bash scripts/dev-all.sh",
+    "dev:all:win": "pwsh scripts/dev-all.ps1",
+    "devrun:all": "node scripts/dev-all.js",
+    "build": "tsc --project tsconfig.json",
+    "start": "node dist/backend/server.js",
+    "parse": "tsx backend/parser/metadata-parser.ts",
+    "validate": "tsx backend/type-checker/type-checker.ts",
+    "ci-writeback": "tsx backend/ci-watcher/ci-watcher.ts",
+    "vector:build": "tsx backend/vector/vector-index.ts",
+    "type-check": "tsc --noEmit",
+    "wiki": "tsx cli/wiki.ts",
+    "wiki:note": "tsx cli/wiki.ts note",
+    "wiki:git": "tsx cli/wiki.ts git",
+    "wiki:test": "tsx cli/wiki.ts test",
+    "wiki:module": "tsx cli/wiki.ts module",
+    "wiki:doc": "tsx cli/wiki.ts doc",
+    "wiki:map": "tsx cli/wiki.ts map",
+    "wiki:milestone": "tsx cli/wiki.ts milestone",
+    "wiki:vector": "tsx cli/wiki.ts vector",
+    "wiki:ci": "tsx cli/wiki.ts ci"
+  },
+  "dependencies": {
+    "chokidar": "^3.6.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "gray-matter": "^4.0.3",
+    "remark": "^15.0.1",
+    "remark-parse": "^11.0.0",
+    "simple-git": "^3.25.0",
+    "unified": "^11.0.5"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.0",
+    "tsx": "^4.23.1",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

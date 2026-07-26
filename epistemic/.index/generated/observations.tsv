@@ -1,0 +1,7 @@
+uid	atom_uid	epoch	market_regime	monetary_policy	liquidity	inflation	geopolitical	impact	probability	stance	confidence_value
+2023Q1_rate_nim_obs	rate_affects_bank_nim	2023Q1	risk_off|0.6	tightening|0.9	tight|0.6	rising|0.7	stable|0.5	70	0.75	support	0.65
+2023Q2_rate_nim_obs	rate_affects_bank_nim	2023Q2	risk_off|0.5	tightening|0.85	tight|0.7	rising|0.6	stable|0.5	-30	0.55	contradict	0.5
+2023Q3_rate_nim_obs	rate_affects_bank_nim	2023Q3	risk_off|0.5	tightening|0.8	tight|0.75	stable|0.5	stable|0.5	-40	0.6	contradict	0.55
+2023Q4_rate_nim_obs	rate_affects_bank_nim	2023Q4	risk_on|0.5	tightening|0.7	ample|0.5	falling|0.5	stable|0.5	25	0.5	support	0.5
+2024Q2_rate_nim_obs	rate_affects_bank_nim	2024Q2	risk_on|0.5	neutral|0.6	ample|0.55	falling|0.6	stable|0.5	-20	0.5	contradict	0.45
+2024Q4_rate_nim_obs	rate_affects_bank_nim	2024Q4	risk_on|0.5	easing|0.7	ample|0.6	falling|0.6	stable|0.5	-35	0.55	contradict	0.5

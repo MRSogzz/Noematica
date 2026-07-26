@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FeedbackContract",
+  "description": "llm-wiki -> epistemic。使用者對某次回答的反饋，寫回 epistemic/7_Query_History/，作為未來人工審查（Governance Auditor 的判斷輸入之一）的原始資料，不會自動改動 Atom/Observation。",
+  "type": "object",
+  "required": ["type", "target", "signal"],
+  "properties": {
+    "type": { "const": "feedback" },
+    "target": {
+      "type": "string",
+      "description": "被反饋的 Observation uid，或 Belief Contract 對應的查詢紀錄檔名。"
+    },
+    "signal": {
+      "type": "string",
+      "enum": ["low_confidence", "high_confidence", "irrelevant", "outdated", "wrong"],
+      "description": "反饋訊號的分類，非自由文字，避免 Governance Auditor 未來要處理非結構化雜訊。"
+    },
+    "note": {
+      "type": "string",
+      "description": "選填，使用者的自由文字說明。"
+    },
+    "query_log_ref": {
+      "type": ["string", "null"],
+      "description": "選填，對應本次查詢在 epistemic/7_Query_History/ 底下的檔名，方便追溯完整脈絡。"
+    }
+  },
+  "example": {
+    "type": "feedback",
+    "target": "obs_ai_chip_growth",
+    "signal": "low_confidence",
+    "note": "使用者認為這筆觀測的信心值太高了",
+    "query_log_ref": "20260712T120000_abcd1234.json"
+  }
+}

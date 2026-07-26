@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QueryContract",
+  "description": "llm-wiki -> epistemic。使用者問題經過 LLM 解析後，交給 epistemic_adapter 的輸入格式。",
+  "type": "object",
+  "required": ["query"],
+  "properties": {
+    "query": {
+      "type": "string",
+      "description": "使用者原始問題（或其摘要），用來比對 Entity 的 name/aliases。"
+    },
+    "atom": {
+      "type": ["string", "null"],
+      "description": "選填。若已知明確指向哪個 Atom uid，可略過 Entity 比對直接指定。"
+    },
+    "context": {
+      "type": "object",
+      "description": "五維情境，鍵為 market_regime / monetary_policy / liquidity / inflation / geopolitical，皆為選填；未提供的維度不參與過濾。",
+      "properties": {
+        "market_regime":   { "$ref": "#/definitions/dim" },
+        "monetary_policy": { "$ref": "#/definitions/dim" },
+        "liquidity":       { "$ref": "#/definitions/dim" },
+        "inflation":       { "$ref": "#/definitions/dim" },
+        "geopolitical":    { "$ref": "#/definitions/dim" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "definitions": {
+    "dim": {
+      "type": "object",
+      "required": ["value"],
+      "properties": {
+        "value": { "type": "string" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  },
+  "note": "原始建議文件的範例用了 domain/time 這種自由欄位；本 schema 統一收斂成五維 context，domain 層級的篩選改由 query 字串比對 Entity.domains 處理，見 integration/contracts/README.md。",
+  "example": {
+    "query": "台積電未來五年成長?",
+    "atom": null,
+    "context": {
+      "monetary_policy": { "value": "tightening", "confidence": 0.8 }
+    }
+  }
+}

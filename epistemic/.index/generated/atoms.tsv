@@ -1,0 +1,4 @@
+uid	from	to	type	status	abstraction_level
+rate_affects_bank_nim	fed_funds_rate	bank_net_interest_margin	causal	active	2
+transformer_requires_positional_encoding	transformer_architecture	positional_encoding_mechanism	constraint	active	3
+word2vec_causal_transformer	word2vec	transformer_architecture	causal	active	2

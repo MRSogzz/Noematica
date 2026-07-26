@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BeliefContract",
+  "description": "epistemic -> llm-wiki。Reasoning Engine 組完 Belief Contract 後才交給 LLM 生成最終文字回應；llm-wiki 收到的是這個結構化物件，而不是 epistemic 內部的 Atom/Observation 卡片。",
+  "type": "object",
+  "required": ["support", "contradiction", "uncertainty", "abstained"],
+  "properties": {
+    "support": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/evidence_ref" }
+    },
+    "contradiction": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/evidence_ref" }
+    },
+    "baseline": {
+      "type": "array",
+      "description": "context 過濾後不足 2 筆時，退化為歷史基線模式的結果。",
+      "items": { "$ref": "#/definitions/evidence_ref" }
+    },
+    "uncertainty": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "1 - path_confidence。llm-wiki 應該把這個值明確呈現給使用者，不能默默丟掉。"
+    },
+    "abstained": {
+      "type": "boolean",
+      "description": "true 時 support/contradiction 必為空陣列，llm-wiki 必須改走棄權文案，不可假裝有答案。"
+    },
+    "abstain_reason": {
+      "type": ["string", "null"],
+      "enum": ["no_matching_atom", "low_path_confidence", "insufficient_observations",
+               "insufficient_context_match", null]
+    }
+  },
+  "definitions": {
+    "evidence_ref": {
+      "type": "object",
+      "required": ["obs", "confidence"],
+      "properties": {
+        "obs": { "type": "string", "description": "epistemic/3_Observations/ 底下的 Observation uid" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  },
+  "example": {
+    "support": [{ "obs": "ai_chip_growth_2026", "confidence": 0.82 }],
+    "contradiction": [{ "obs": "chip_cycle_downturn", "confidence": 0.55 }],
+    "baseline": [],
+    "uncertainty": 0.61,
+    "abstained": false,
+    "abstain_reason": null
+  }
+}

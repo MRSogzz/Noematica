@@ -1,0 +1,8 @@
+uid	name	domains	aliases	type
+bank_net_interest_margin	銀行淨利差	macro,finance	NIM,銀行獲利,淨息差	macro_variable
+fed_funds_rate	聯邦基金利率	macro,finance	FFR,美國基準利率,聯準會利率	macro_variable
+positional_encoding_mechanism	位置編碼機制	nlp,deep_learning	位置編碼,Positional Encoding,位置向量,Positional Embedding	concept
+transformer_architecture	Transformer 架構	nlp,deep_learning	Transformer,自注意力架構	concept
+tsmc	台積電	semiconductor,taiwan_equity	TSMC,台灣積體電路,2330	company
+word2vec	Word2Vec	nlp,deep_learning		concept
+word_embedding	詞嵌入	nlp,deep_learning	Embedding,Word Embedding,嵌入向量,嵌入	concept

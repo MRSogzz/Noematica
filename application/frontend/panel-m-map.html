@@ -1,0 +1,1547 @@
+<!--
+  ⚠️ 這份 3D 卡片關聯地圖已經被 panel-m-orbit.html 取代（M 鍵現在指向那份檔案，
+     見 hud-core.js 的 openModal()）。原因：實體數量變多之後，把全部節點攤在同一個
+     3D 空間裡不好找東西，而且暗示了一種後端 Activation Engine 並不提供的「全局視角」
+     ——Activation Engine 本質上是「以焦點為中心、有限跳數展開」，不是一次看全圖。
+     新版改成 Search + Activation Queue（依 Path Confidence 分 Strong/Medium/Weak/Hidden）
+     + 以焦點為中心的同心圓 Orbit（Layer 0/1/2/3...，滾輪展開層數不是縮放）+ Explain/
+     Timeline 面板，技術上也從 Three.js 換成純 HTML/CSS Grid/SVG/Vanilla JS，不依賴
+     WebGL 或外部 CDN。
+
+     這個檔案保留下來是為了不砍掉還能參考的程式碼（例如筆記抽取/草稿審查 Modal的
+     實作，新版也是從這裡搬過去的），但不建議再繼續維護這一份。
+-->
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>M · 認知地圖 — Epistemic 3D 關聯圖</title>
+
+    <style>
+        /* ===== 全域 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #0a091b;
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, sans-serif;
+            color: #fff;
+            height: 100vh;
+        }
+
+        /* ===== 左側導航 ===== */
+        #sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 210px;
+            height: 100vh;
+            background: rgba(12, 10, 30, 0.85);
+            backdrop-filter: blur(18px);
+            border-right: 1px solid rgba(255, 255, 255, 0.04);
+            z-index: 30;
+            padding: 28px 0 24px 0;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+            box-shadow: 4px 0 40px rgba(0, 0, 0, 0.6);
+        }
+        #sidebar .logo {
+            padding: 0 20px 20px 20px;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            margin-bottom: 14px;
+            background: linear-gradient(135deg, #a78bfa, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        #sidebar .logo small {
+            font-size: 12px;
+            font-weight: 400;
+            opacity: 0.4;
+            -webkit-text-fill-color: rgba(255, 255, 255, 0.3);
+            display: block;
+            margin-top: 2px;
+        }
+        #sidebar ul {
+            list-style: none;
+            padding: 0 10px;
+            flex: 1;
+        }
+        #sidebar li {
+            padding: 10px 16px;
+            margin: 2px 0;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            color: rgba(255, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid transparent;
+        }
+        #sidebar li:hover {
+            background: rgba(255, 255, 255, 0.04);
+            color: #fff;
+        }
+        #sidebar li.active {
+            background: rgba(167, 139, 250, 0.15);
+            color: #c4b5fd;
+            border-color: rgba(167, 139, 250, 0.2);
+        }
+        #sidebar li .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        #sidebar .sidebar-footer {
+            padding: 12px 20px 0 20px;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.15);
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        /* ===== 右側詳情面板 ===== */
+        #detail-panel {
+            position: fixed;
+            right: 28px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 25;
+            width: 280px;
+            background: rgba(12, 10, 30, 0.82);
+            backdrop-filter: blur(18px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 28px 24px 24px 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            transition: all 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+            opacity: 0;
+            transform: translateY(-50%) translateX(30px);
+            pointer-events: none;
+        }
+        #detail-panel.active {
+            opacity: 1;
+            transform: translateY(-50%) translateX(0);
+            pointer-events: auto;
+        }
+        #detail-panel .close-btn {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 20px;
+            cursor: pointer;
+            transition: color 0.2s;
+            padding: 4px;
+            line-height: 1;
+        }
+        #detail-panel .close-btn:hover {
+            color: #fff;
+        }
+        #detail-panel .panel-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: rgba(255, 255, 255, 0.2);
+            margin-bottom: 6px;
+        }
+        #detail-panel .panel-title {
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 2px;
+            line-height: 1.2;
+        }
+        #detail-panel .panel-type {
+            display: inline-block;
+            font-size: 12px;
+            padding: 2px 14px;
+            border-radius: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 4px;
+            margin-bottom: 16px;
+            letter-spacing: 0.5px;
+        }
+        #detail-panel .panel-desc {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.55);
+            line-height: 1.7;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            padding-top: 14px;
+        }
+        #detail-panel .panel-links {
+            margin-top: 14px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.3);
+        }
+        #detail-panel .panel-relation-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.4);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+        }
+        #detail-panel .panel-relation-item .score {
+            color: #fbbf24;
+            font-weight: 600;
+        }
+        #detail-panel .panel-relation-item .rel-type {
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 11px;
+            padding-left: 8px;
+        }
+
+        /* ===== 3D 容器 ===== */
+        #canvas-container {
+            position: fixed;
+            left: 210px;
+            top: 0;
+            width: calc(100% - 210px);
+            height: 100vh;
+            z-index: 1;
+        }
+
+        /* ===== 操作提示 ===== */
+        #hint {
+            position: fixed;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 15;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.15);
+            letter-spacing: 1px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(8px);
+            padding: 6px 22px;
+            border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            pointer-events: none;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        /* ===== 響應式 ===== */
+        @media (max-width: 820px) {
+            #sidebar {
+                transform: translateX(-100%);
+                width: 240px;
+            }
+            #sidebar.open {
+                transform: translateX(0);
+            }
+            #canvas-container {
+                left: 0;
+                width: 100%;
+            }
+            #detail-panel {
+                right: 16px;
+                left: 16px;
+                width: auto;
+                top: auto;
+                bottom: 80px;
+                transform: none;
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            #detail-panel.active {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            #hint {
+                font-size: 11px;
+                padding: 4px 14px;
+                bottom: 16px;
+                white-space: nowrap;
+            }
+            #menu-toggle {
+                display: flex !important;
+            }
+        }
+
+        #menu-toggle {
+            display: none;
+            position: fixed;
+            left: 16px;
+            top: 16px;
+            z-index: 40;
+            background: rgba(12, 10, 30, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            color: #fff;
+            font-size: 22px;
+            padding: 8px 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        #menu-toggle:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        /* CSS2D 標籤 (關聯線上的) */
+        .relation-label {
+            background: rgba(8, 6, 24, 0.7);
+            backdrop-filter: blur(4px);
+            padding: 2px 10px;
+            border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            pointer-events: none;
+            white-space: nowrap;
+            font-weight: 400;
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        .relation-label .score {
+            color: #fbbf24;
+            font-weight: 600;
+            margin-left: 4px;
+        }
+        .relation-label .rel-type {
+            color: rgba(167, 139, 250, 0.7);
+            margin-right: 4px;
+        }
+
+        /* ===== 新增：載入 / 錯誤狀態 ===== */
+        #map-status {
+            position: fixed;
+            left: 210px; top: 0; width: calc(100% - 210px); height: 100vh;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 14px; z-index: 20; background: #0a091b;
+        }
+        #map-status.hidden { display: none; }
+        #map-status .spin {
+            width: 34px; height: 34px; border-radius: 50%;
+            border: 3px solid rgba(167, 139, 250, 0.15);
+            border-top-color: #a78bfa;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #map-status .msg { font-size: 13px; color: rgba(255,255,255,0.4); text-align: center; line-height: 1.7; }
+        #map-status .msg b { color: #f472b6; }
+        #map-status button {
+            font-family: 'Segoe UI', sans-serif; font-size: 12px; padding: 7px 18px;
+            border-radius: 20px; border: 1px solid rgba(167,139,250,0.35);
+            background: rgba(167,139,250,0.1); color: #c4b5fd; cursor: pointer;
+        }
+        #map-status button:hover { background: rgba(167,139,250,0.2); }
+
+        /* ===== 新增：關係詳情（點擊關聯項目後顯示的 belief 查詢結果）===== */
+        .rel-belief-trigger { cursor: pointer; }
+        .rel-belief-trigger:hover { background: rgba(167,139,250,0.06); border-radius: 6px; }
+        #belief-detail {
+            margin-top: 10px; padding-top: 10px;
+            border-top: 1px dashed rgba(255,255,255,0.08);
+            font-size: 12px; display: none;
+        }
+        #belief-detail.active { display: block; }
+        #belief-detail .bd-title { font-size: 11px; color: rgba(255,255,255,0.3); margin-bottom: 6px; letter-spacing: .5px; }
+        #belief-detail .bd-loading { color: rgba(255,255,255,0.3); font-size: 12px; }
+        #belief-detail .bd-uncertainty { font-size: 12px; color: #fbbf24; margin-bottom: 8px; }
+        #belief-detail .bd-abstain { color: rgba(255,255,255,0.4); font-size: 12px; line-height: 1.6; }
+        #belief-detail .bd-group { margin-bottom: 8px; }
+        #belief-detail .bd-group-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+        #belief-detail .bd-group-label.support { color: #4ade80; }
+        #belief-detail .bd-group-label.contradict { color: #f87171; }
+        #belief-detail .bd-obs { font-size: 11px; color: rgba(255,255,255,0.5); padding: 2px 0 2px 8px; }
+        #belief-detail .bd-obs .conf { color: rgba(255,255,255,0.3); }
+
+        /* ===== 新增：側欄的筆記抽取觸發按鈕 ===== */
+        #extract-trigger {
+            width: 100%; margin: 4px 0 14px; padding: 9px;
+            background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.3);
+            border-radius: 8px; color: #c4b5fd; font-family: inherit; font-size: 12px; cursor: pointer;
+        }
+        #extract-trigger:hover { background: rgba(167,139,250,0.2); }
+
+        #review-trigger {
+            width: 100%; margin: 0 0 14px; padding: 9px;
+            background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.3);
+            border-radius: 8px; color: #86efac; font-family: inherit; font-size: 12px; cursor: pointer;
+        }
+        #review-trigger:hover { background: rgba(74,222,128,0.16); }
+
+        /* ===== 新增：草稿審查 Modal（比抽取 Modal 寬一些，因為要放列表）===== */
+        #review-modal .modal-box { width: min(680px, 92vw); }
+        #review-empty { font-size: 12px; color: rgba(255,255,255,0.3); padding: 20px 0; text-align: center; }
+        .review-item {
+            border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+            padding: 12px 14px; margin-bottom: 10px; background: rgba(255,255,255,0.02);
+        }
+        .review-item.is-approved { border-color: rgba(74,222,128,0.35); background: rgba(74,222,128,0.04); }
+        .review-item-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .review-type-badge {
+            font-size: 10px; padding: 2px 8px; border-radius: 10px; text-transform: uppercase;
+            letter-spacing: .5px; font-weight: 600;
+        }
+        .review-type-badge.type-entity      { background: rgba(96,165,250,0.15); color: #60a5fa; }
+        .review-type-badge.type-atom        { background: rgba(167,139,250,0.15); color: #a78bfa; }
+        .review-type-badge.type-observation { background: rgba(251,191,36,0.15); color: #fbbf24; }
+        .review-type-badge.type-source      { background: rgba(244,114,182,0.15); color: #f472b6; }
+        .review-item-summary { font-size: 13px; color: #e5e0ff; flex: 1; }
+        .review-item-status { font-size: 11px; color: rgba(255,255,255,0.35); }
+        .review-item-status.approved { color: #4ade80; }
+        .review-item-actions { display: flex; gap: 8px; margin-top: 8px; }
+        .review-item-actions button {
+            font-size: 11px; padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.7); cursor: pointer; font-family: inherit;
+        }
+        .review-item-actions button.btn-approve:hover { border-color: #4ade80; color: #4ade80; }
+        .review-item-actions button.btn-reject:hover  { border-color: #f87171; color: #f87171; }
+        .review-item-actions button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .review-item-detail {
+            display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.08);
+            font-size: 11px; color: rgba(255,255,255,0.5); white-space: pre-wrap; max-height: 200px; overflow-y: auto;
+            font-family: 'Consolas', monospace;
+        }
+        .review-item-detail.active { display: block; }
+        #review-compile-btn { margin-top: 8px; }
+        #review-compile-result { margin-top: 14px; font-size: 12px; }
+        #review-compile-result .er-ok   { color: #4ade80; margin-bottom: 4px; }
+        #review-compile-result .er-err  { color: #f87171; margin-bottom: 4px; }
+
+        /* ===== 新增：筆記抽取 Modal ===== */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 200;
+            background: rgba(0,0,0,0.6); align-items: center; justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            width: min(560px, 90vw); max-height: 85vh; overflow-y: auto;
+            background: #14132b; border: 1px solid rgba(167,139,250,0.25); border-radius: 14px;
+            padding: 24px; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .modal-box h2 { font-size: 16px; margin-bottom: 8px; color: #e5e0ff; }
+        .modal-hint { font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.7; margin-bottom: 18px; }
+        .modal-hint code { background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px; }
+        .modal-hint b { color: #fbbf24; }
+        .modal-close {
+            position: absolute; top: 14px; right: 14px; background: none; border: none;
+            color: rgba(255,255,255,0.4); font-size: 18px; cursor: pointer;
+        }
+        .modal-field { margin-bottom: 14px; }
+        .modal-field label {
+            display: block; font-size: 11px; color: rgba(255,255,255,0.4);
+            margin-bottom: 5px; letter-spacing: .5px;
+        }
+        .modal-field select, .modal-field input, .modal-field textarea {
+            width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px; padding: 9px 12px; color: #e5e0ff; font-family: inherit;
+            font-size: 13px; resize: vertical; box-sizing: border-box;
+        }
+        .modal-field select:focus, .modal-field input:focus, .modal-field textarea:focus {
+            outline: none; border-color: rgba(167,139,250,0.5);
+        }
+        .modal-provider-info {
+            font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 16px;
+            padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 8px;
+        }
+        .modal-provider-info b { color: #a78bfa; }
+        .modal-submit {
+            width: 100%; padding: 11px; border-radius: 8px; border: none;
+            background: linear-gradient(135deg, #a78bfa, #f472b6); color: #14132b;
+            font-weight: 600; font-size: 13px; cursor: pointer;
+        }
+        .modal-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+        #extract-result { margin-top: 16px; font-size: 12px; }
+        #extract-result .er-ok   { color: #4ade80; margin-bottom: 6px; }
+        #extract-result .er-warn { color: #fbbf24; margin-bottom: 4px; }
+        #extract-result .er-err  { color: #f87171; }
+        #extract-result .er-info { color: rgba(255,255,255,0.4); margin-top: 8px; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+    <!-- ====== 移動端選單 ====== -->
+    <button id="menu-toggle">☰</button>
+
+    <!-- ====== 左側導航 ====== -->
+    <nav id="sidebar">
+        <div class="logo">
+            ⚡ 認知系統
+            <small>Epistemic 知識關聯圖譜</small>
+        </div>
+        <button id="extract-trigger" onclick="openExtractModal()">📝 筆記抽取為知識</button>
+        <button id="review-trigger" onclick="openReviewModal()">📋 審查 0_Inbox 草稿</button>
+        <ul id="nav-list"></ul>
+        <div class="sidebar-footer">點擊卡片展開 · 再次點擊收起</div>
+    </nav>
+
+    <!-- ====== 載入 / 錯誤狀態 ====== -->
+    <div id="map-status">
+        <div class="spin"></div>
+        <div class="msg" id="map-status-msg">正在讀取 epistemic 知識圖譜…</div>
+    </div>
+
+    <!-- ====== 筆記抽取 Modal ====== -->
+    <div id="extract-modal" class="modal-overlay">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeExtractModal()">✕</button>
+            <h2>📝 把筆記抽取成候選知識</h2>
+            <p class="modal-hint">
+                用 LLM 讀你的筆記，抽取候選 Entity/Atom/Observation，寫成<b>未核准</b>的草稿到
+                <code>epistemic/0_Inbox/</code>——不會自動變成正式知識庫的一部分，你要自己審查、
+                核准，再跑 Compiler 才會出現在這張地圖上。
+            </p>
+
+            <div class="modal-field">
+                <label>來源</label>
+                <select id="extract-source-select" onchange="onExtractSourceChange()">
+                    <option value="__manual__">✏️ 直接輸入文字</option>
+                </select>
+            </div>
+
+            <div class="modal-field">
+                <label>標題</label>
+                <input type="text" id="extract-title-input" placeholder="（選填，預設用文字前 30 字）">
+            </div>
+
+            <div class="modal-field">
+                <label>內容</label>
+                <textarea id="extract-text-area" rows="8" placeholder="貼上或輸入筆記內容…"></textarea>
+            </div>
+
+            <div class="modal-provider-info" id="extract-provider-info"></div>
+
+            <button class="modal-submit" id="extract-submit-btn" onclick="submitExtraction()">開始抽取</button>
+
+            <div id="extract-result"></div>
+        </div>
+    </div>
+
+    <!-- ====== 草稿審查 Modal ====== -->
+    <div id="review-modal" class="modal-overlay">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeReviewModal()">✕</button>
+            <h2>📋 審查 0_Inbox/ 草稿</h2>
+            <p class="modal-hint">
+                核准（✔）不會馬上生效，核准完按最下面「編譯已核准的草稿」才會真的驗證、
+                寫進正式的 <code>epistemic/</code> 四層；拒絕（✕）會把草稿搬進
+                <code>6_Rejected/</code> 並附上原因，不是直接刪除。
+            </p>
+
+            <div id="review-list"></div>
+            <div id="review-empty" style="display:none;">目前 0_Inbox/ 沒有待審查的草稿。</div>
+
+            <button class="modal-submit" id="review-compile-btn" onclick="runCompile()">編譯已核准的草稿</button>
+            <div id="review-compile-result"></div>
+        </div>
+    </div>
+
+    <!-- ====== 右側詳情面板 ====== -->
+    <div id="detail-panel">
+        <button class="close-btn" id="panel-close">✕</button>
+        <div class="panel-label">節點詳情</div>
+        <div class="panel-title" id="panel-title">—</div>
+        <div class="panel-type" id="panel-type">—</div>
+        <div class="panel-desc" id="panel-desc">點擊卡片展開查看</div>
+        <div class="panel-links" id="panel-relations">
+            <div style="margin-bottom:6px;color:rgba(255,255,255,0.15);font-size:12px;">關聯關係（點擊查詢即時信心）</div>
+            <div id="relation-list"></div>
+        </div>
+        <div id="belief-detail">
+            <div class="bd-title">認知系統即時查詢</div>
+            <div id="belief-detail-body"></div>
+        </div>
+    </div>
+
+    <!-- ====== 3D 容器 ====== -->
+    <div id="canvas-container"></div>
+
+    <!-- ====== 操作提示 ====== -->
+    <div id="hint">🖱 拖拽旋轉 · 滾輪縮放 · 點擊卡片展開</div>
+
+    <!-- ============================================================ -->
+    <!--  Three.js 模組載入                                          -->
+    <!-- ============================================================ -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.163.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.163.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        // ============================================================
+        //  模組匯入
+        // ============================================================
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // ============================================================
+        //  API 位址（沿用 HUD 設定裡的 api_server，沒有就用預設值）
+        // ============================================================
+        const API_BASE = (() => {
+            try {
+                const cfg = JSON.parse(localStorage.getItem('llm-wiki-config') || '{}');
+                return cfg.api_server || 'http://localhost:3001';
+            } catch { return 'http://localhost:3001'; }
+        })();
+
+        // ============================================================
+        //  筆記抽取 Modal — 把筆記轉成候選知識（Entity/Atom/Observation）
+        //  用的 AI provider 讀同一份 localStorage 設定（跟 H 面板 AI 整理助手共用同一套，
+        //  也就是設定頁選 llama.cpp 時，這裡也會打本機的 llama.cpp，不會偷偷打別的 API）
+        // ============================================================
+        function getAiConfig() {
+            try { return JSON.parse(localStorage.getItem('llm-wiki-config') || '{}'); }
+            catch { return {}; }
+        }
+
+        const PROVIDER_LABELS = {
+            anthropic: 'Anthropic', openai: 'OpenAI', llama: 'llama.cpp（本機）', custom: '自訂端點',
+        };
+
+        async function openExtractModal() {
+            document.getElementById('extract-modal').classList.add('active');
+            document.getElementById('extract-result').innerHTML = '';
+            document.getElementById('extract-text-area').value = '';
+            document.getElementById('extract-title-input').value = '';
+
+            // 顯示目前設定頁選的 AI provider，讓使用者確認等一下真的會打對的 LLM
+            const cfg = getAiConfig();
+            const providerInfo = document.getElementById('extract-provider-info');
+            const provider = cfg.ai_provider || 'anthropic';
+            if (provider === 'llama') {
+                providerInfo.innerHTML = `目前使用：<b>llama.cpp</b>（本機）　`
+                    + `${cfg.llama_host || 'http://127.0.0.1'}:${cfg.llama_port || '8080'}`;
+            } else {
+                providerInfo.innerHTML = `目前使用：<b>${PROVIDER_LABELS[provider] || provider}</b>　`
+                    + `<span style="opacity:.6">要換 LLM 到設定頁（右上角齒輪圖示）調整</span>`;
+            }
+
+            // 載入既有筆記清單，讓使用者可以直接挑一篇，不用自己複製貼上
+            const select = document.getElementById('extract-source-select');
+            select.innerHTML = '<option value="__manual__">✏️ 直接輸入文字</option>';
+            try {
+                const res = await fetch(API_BASE + '/api/notes');
+                if (res.ok) {
+                    const data = await res.json();
+                    for (const n of (data.notes || [])) {
+                        const opt = document.createElement('option');
+                        opt.value = n.filename;
+                        opt.textContent = `${n.filename}${n.preview ? '　—　' + n.preview : ''}`;
+                        select.appendChild(opt);
+                    }
+                }
+            } catch (e) {
+                // 筆記清單載入失敗不影響「直接輸入文字」這條路徑，安靜略過即可
+            }
+        }
+
+        function closeExtractModal() {
+            document.getElementById('extract-modal').classList.remove('active');
+        }
+
+        async function onExtractSourceChange() {
+            const select   = document.getElementById('extract-source-select');
+            const textarea = document.getElementById('extract-text-area');
+            const titleInput = document.getElementById('extract-title-input');
+            const filename = select.value;
+            if (filename === '__manual__') {
+                textarea.value = '';
+                textarea.readOnly = false;
+                return;
+            }
+            textarea.readOnly = true;
+            textarea.value = '讀取中…';
+            try {
+                const res = await fetch(API_BASE + '/api/notes/' + encodeURIComponent(filename));
+                const data = await res.json();
+                textarea.value = data.content || '';
+                if (!titleInput.value) titleInput.value = filename.replace(/\.md$/, '');
+            } catch (e) {
+                textarea.value = '（讀取失敗：' + (e.message || e) + '）';
+            } finally {
+                textarea.readOnly = false;
+            }
+        }
+
+        async function submitExtraction() {
+            const text  = document.getElementById('extract-text-area').value.trim();
+            const title = document.getElementById('extract-title-input').value.trim();
+            const resultEl = document.getElementById('extract-result');
+            const btn = document.getElementById('extract-submit-btn');
+
+            if (!text) {
+                resultEl.innerHTML = '<div class="er-err">請輸入或選擇筆記內容</div>';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '抽取中…';
+            resultEl.innerHTML = '<div class="er-info">呼叫 LLM 中，視內容長度可能要幾秒到幾十秒…</div>';
+
+            try {
+                const res = await fetch(API_BASE + '/api/epistemic/extract', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, title, ai_config: getAiConfig() }),
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    resultEl.innerHTML = `<div class="er-err">抽取失敗：${
+                        (data.detail || data.error || ('HTTP ' + res.status)).toString().replace(/</g,'&lt;')
+                    }</div>`;
+                    return;
+                }
+
+                const c = data.created || {};
+                let html = `<div class="er-ok">✔ 完成：新建 Entity ${c.entity?.length||0} 筆、`
+                         + `Atom ${c.atom?.length||0} 筆、Observation ${c.observation?.length||0} 筆、`
+                         + `Source ${c.source?.length||0} 筆</div>`;
+                if (data.warnings && data.warnings.length) {
+                    html += data.warnings.map(w => `<div class="er-warn">⚠ ${w}</div>`).join('');
+                }
+                html += `<div class="er-info">摘要檔案：${data.summary}<br>
+                    這些都是「未核准」的草稿。點左側「📋 審查 0_Inbox 草稿」逐一檢查、
+                    核准或拒絕，核准完按「編譯已核准的草稿」才會真的變成正式知識。</div>`;
+                resultEl.innerHTML = html;
+            } catch (e) {
+                resultEl.innerHTML = `<div class="er-err">抽取失敗：${(e.message||String(e)).replace(/</g,'&lt;')}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '開始抽取';
+            }
+        }
+
+        // ============================================================
+        //  草稿審查 Modal — 列表 / 查看 / 核准 / 拒絕 / 編譯
+        // ============================================================
+        async function openReviewModal() {
+            document.getElementById('review-modal').classList.add('active');
+            document.getElementById('review-compile-result').innerHTML = '';
+            await loadReviewList();
+        }
+
+        function closeReviewModal() {
+            document.getElementById('review-modal').classList.remove('active');
+        }
+
+        const TYPE_LABELS = { entity: 'Entity', atom: 'Atom', observation: 'Observation', source: 'Source' };
+
+        async function loadReviewList() {
+            const listEl = document.getElementById('review-list');
+            const emptyEl = document.getElementById('review-empty');
+            listEl.innerHTML = '<div class="er-info">載入中…</div>';
+            try {
+                const res = await fetch(API_BASE + '/api/epistemic/inbox');
+                const data = await res.json();
+                const drafts = data.drafts || [];
+
+                if (!drafts.length) {
+                    listEl.innerHTML = '';
+                    emptyEl.style.display = 'block';
+                    return;
+                }
+                emptyEl.style.display = 'none';
+
+                listEl.innerHTML = drafts.map(d => `
+                    <div class="review-item ${d.approved ? 'is-approved' : ''}" data-filename="${d.filename}">
+                        <div class="review-item-header">
+                            <span class="review-type-badge type-${d.draft_type}">${TYPE_LABELS[d.draft_type] || d.draft_type}</span>
+                            <span class="review-item-summary">${(d.summary || '').replace(/</g,'&lt;')}</span>
+                            <span class="review-item-status ${d.approved ? 'approved' : ''}">${d.approved ? '✔ 已核准' : '待審查'}</span>
+                        </div>
+                        <div class="review-item-actions">
+                            <button class="btn-approve" onclick="approveDraft('${d.filename}')" ${d.approved ? 'disabled' : ''}>✔ 核准</button>
+                            <button class="btn-reject" onclick="rejectDraft('${d.filename}')">✕ 拒絕</button>
+                            <button onclick="toggleDraftDetail('${d.filename}')">查看內容</button>
+                        </div>
+                        <div class="review-item-detail" id="detail-${cssEscape(d.filename)}"></div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                listEl.innerHTML = `<div class="er-err">載入失敗：${(e.message||String(e)).replace(/</g,'&lt;')}</div>`;
+            }
+        }
+
+        // 檔名可能含 . 這種在 CSS id selector 裡有特殊意義的字元，包一層簡單轉義
+        function cssEscape(s) { return s.replace(/[^a-zA-Z0-9_-]/g, '_'); }
+
+        async function toggleDraftDetail(filename) {
+            const el = document.getElementById('detail-' + cssEscape(filename));
+            if (el.classList.contains('active')) {
+                el.classList.remove('active');
+                return;
+            }
+            if (!el.textContent) {
+                el.textContent = '載入中…';
+                try {
+                    const res = await fetch(API_BASE + '/api/epistemic/inbox/' + encodeURIComponent(filename));
+                    const data = await res.json();
+                    el.textContent = data.raw || '（沒有內容）';
+                } catch (e) {
+                    el.textContent = '載入失敗：' + (e.message || e);
+                }
+            }
+            el.classList.add('active');
+        }
+
+        async function approveDraft(filename) {
+            try {
+                const res = await fetch(API_BASE + '/api/epistemic/inbox/' + encodeURIComponent(filename) + '/approve', { method: 'POST' });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || err.error || ('HTTP ' + res.status));
+                }
+                await loadReviewList();
+            } catch (e) {
+                alert('核准失敗：' + (e.message || e));
+            }
+        }
+
+        async function rejectDraft(filename) {
+            const reason = prompt('拒絕原因（選填，會記錄在 6_Rejected/ 裡）：', '') || '';
+            try {
+                const res = await fetch(API_BASE + '/api/epistemic/inbox/' + encodeURIComponent(filename) + '/reject', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason }),
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || err.error || ('HTTP ' + res.status));
+                }
+                await loadReviewList();
+            } catch (e) {
+                alert('拒絕失敗：' + (e.message || e));
+            }
+        }
+
+        async function runCompile() {
+            const btn = document.getElementById('review-compile-btn');
+            const resultEl = document.getElementById('review-compile-result');
+            btn.disabled = true;
+            btn.textContent = '編譯中…';
+            resultEl.innerHTML = '';
+            try {
+                const res = await fetch(API_BASE + '/api/epistemic/compile', { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || data.error || ('HTTP ' + res.status));
+
+                const compiled = data.compiled || [];
+                const rejected = data.rejected || [];
+                let html = `<div class="er-ok">✔ 編譯完成：成功 ${compiled.length} 筆${rejected.length ? `，失敗 ${rejected.length} 筆` : ''}</div>`;
+                if (rejected.length) {
+                    html += rejected.map(([uid, missing]) =>
+                        `<div class="er-err">✘ ${uid}：缺 ${Array.isArray(missing) ? missing.join(', ') : missing}</div>`
+                    ).join('');
+                }
+                if (compiled.length) {
+                    html += `<div class="er-info">編譯成功的項目已經出現在地圖上了嗎？如果沒有，重新整理這個頁面。</div>`;
+                }
+                resultEl.innerHTML = html;
+                await loadReviewList(); // 編譯完，已編譯的草稿會從 0_Inbox/ 消失，重新整理列表
+            } catch (e) {
+                resultEl.innerHTML = `<div class="er-err">編譯失敗：${(e.message||String(e)).replace(/</g,'&lt;')}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '編譯已核准的草稿';
+            }
+        }
+
+        // ============================================================
+        //  資料 — 從 epistemic 認知核心讀取（Entity/Atom，經 Node 代理到 Python 服務）
+        //  格式：{ id, name, type, desc, links: [{ targetId, score, relation, atomUid }] }
+        //  score 是該 Atom 底下 Observation 的平均信心（已套用 confidence_decay 上限）；
+        //  relation 是 Atom.type 翻譯後的短標籤；atomUid 用於點擊關聯項目時即時查詢 belief。
+        // ============================================================
+        let nodesData = [];
+
+        async function fetchGraph() {
+            const res = await fetch(API_BASE + '/api/epistemic/graph');
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                throw new Error(body.error || body.detail || `HTTP ${res.status}`);
+            }
+            const data = await res.json();
+            return data.nodes || [];
+        }
+
+        // ============================================================
+        //  顏色對應 — 常見 Entity.type 給固定色，其餘用 hash 出穩定但不同的顏色
+        //  （epistemic 的 type 是開放詞彙，不像原本 demo 是固定 6 種，
+        //   所以不能只靠查表，一定要有 fallback）
+        // ============================================================
+        const typeColors = {
+            macro_variable: '#60a5fa',
+            company:        '#f472b6',
+            concept:        '#a78bfa',
+            policy:         '#34d399',
+            event:          '#fb923c',
+        };
+        function colorForType(type) {
+            if (typeColors[type]) return typeColors[type];
+            // 沒有預設色的 type：用字串 hash 出一個穩定的 HSL 顏色，
+            // 同一個 type 每次都會拿到同一個顏色，但不同 type 之間視覺上會區分開。
+            let hash = 0;
+            for (let i = 0; i < type.length; i++) hash = (hash * 31 + type.charCodeAt(i)) >>> 0;
+            const hue = hash % 360;
+            const color = `hsl(${hue}, 65%, 68%)`;
+            typeColors[type] = color; // 快取，避免每次重算 &（也讓側欄小圓點顏色一致）
+            return color;
+        }
+
+
+        // ============================================================
+        //  DOM 參考
+        // ============================================================
+        const container = document.getElementById('canvas-container');
+        const navList = document.getElementById('nav-list');
+        const panel = document.getElementById('detail-panel');
+        const panelTitle = document.getElementById('panel-title');
+        const panelType = document.getElementById('panel-type');
+        const panelDesc = document.getElementById('panel-desc');
+        const relationList = document.getElementById('relation-list');
+        const panelClose = document.getElementById('panel-close');
+        const menuToggle = document.getElementById('menu-toggle');
+        const sidebar = document.getElementById('sidebar');
+
+        // ============================================================
+        //  場景 / 相機 / 渲染器
+        // ============================================================
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a091b);
+
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 3000);
+        camera.position.set(0, 150, 700);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(container.clientWidth, container.clientHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0';
+        labelRenderer.domElement.style.left = '0';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        container.appendChild(labelRenderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.rotateSpeed = 0.6;
+        controls.autoRotate = false;
+        controls.minDistance = 200;
+        controls.maxDistance = 1800;
+        controls.target.set(0, 0, 0);
+        controls.update();
+
+        // ============================================================
+        //  背景星空
+        // ============================================================
+        const starGeom = new THREE.BufferGeometry();
+        const starCount = 2000;
+        const starPos = new Float32Array(starCount * 3);
+        for (let i = 0; i < starCount * 3; i++) {
+            starPos[i] = (Math.random() - 0.5) * 3000;
+        }
+        starGeom.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+        const starMat = new THREE.PointsMaterial({
+            color: 0x6b6b9a,
+            size: 0.6,
+            transparent: true,
+            opacity: 0.3,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            sizeAttenuation: true,
+        });
+        const stars = new THREE.Points(starGeom, starMat);
+        scene.add(stars);
+
+        // ============================================================
+        //  全域變數
+        // ============================================================
+        let meshes = [];
+        const meshMap = new Map();
+        let lineGroup = new THREE.Group();
+        scene.add(lineGroup);
+        let labelGroup = new THREE.Group();
+        scene.add(labelGroup);
+
+        // 展開狀態
+        let expandedId = null; // 當前展開的節點 id
+
+        // ============================================================
+        //  建立卡片紋理 (支援展開模式)
+        // ============================================================
+        function createCardTexture(name, type, desc = '', expanded = false) {
+            const canvas = document.createElement('canvas');
+            const W = 320,
+                H = expanded ? 220 : 170; // 展開時更高
+            canvas.width = W;
+            canvas.height = H;
+            const ctx = canvas.getContext('2d');
+
+            // 背景
+            const grad = ctx.createLinearGradient(0, 0, 0, H);
+            grad.addColorStop(0, 'rgba(18, 16, 40, 0.92)');
+            grad.addColorStop(1, 'rgba(10, 8, 26, 0.96)');
+            ctx.fillStyle = grad;
+            const rx = 16,
+                ry = 16,
+                x = 6,
+                y = 6,
+                w = W - 12,
+                h = H - 12;
+            ctx.beginPath();
+            ctx.moveTo(x + rx, y);
+            ctx.lineTo(x + w - rx, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + ry);
+            ctx.lineTo(x + w, y + h - ry);
+            ctx.quadraticCurveTo(x + w, y + h, x + w - rx, y + h);
+            ctx.lineTo(x + rx, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - ry);
+            ctx.lineTo(x, y + ry);
+            ctx.quadraticCurveTo(x, y, x + rx, y);
+            ctx.closePath();
+            ctx.fill();
+
+            const borderColor = colorForType(type);
+            ctx.shadowColor = borderColor;
+            ctx.shadowBlur = 24;
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = 1.8;
+            ctx.globalAlpha = 0.6;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.globalAlpha = 1;
+
+            // 類型小點
+            ctx.fillStyle = borderColor;
+            ctx.beginPath();
+            ctx.arc(28, 32, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.font = '11px "Segoe UI", sans-serif';
+            ctx.fillText(type, 42, 37);
+
+            // 名稱
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 28px "Segoe UI", "PingFang SC", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0,0,0,0.6)';
+            ctx.shadowBlur = 12;
+            ctx.fillText(name, 24, 75);
+            ctx.shadowBlur = 0;
+
+            // 如果展開，顯示描述
+            if (expanded && desc) {
+                ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                ctx.font = '13px "Segoe UI", "PingFang SC", sans-serif';
+                ctx.textBaseline = 'top';
+                // 多行顯示，簡單截斷
+                const maxWidth = W - 48;
+                const words = desc.split('');
+                let line = '';
+                let yPos = 110;
+                for (let ch of words) {
+                    const testLine = line + ch;
+                    if (ctx.measureText(testLine).width > maxWidth && line.length > 0) {
+                        ctx.fillText(line, 24, yPos);
+                        line = ch;
+                        yPos += 20;
+                        if (yPos > H - 20) break;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                if (line && yPos < H - 10) {
+                    ctx.fillText(line, 24, yPos);
+                }
+            }
+
+            // 底部裝飾
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+            ctx.lineWidth = 1;
+            const lineY = expanded ? H - 30 : 130;
+            ctx.beginPath();
+            ctx.moveTo(24, lineY);
+            ctx.lineTo(W - 24, lineY);
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(255,255,255,0.04)';
+            ctx.font = '16px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText('◆', W - 20, H - 14);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            return texture;
+        }
+
+        // ============================================================
+        //  建立所有節點 (均勻分佈於球面)
+        // ============================================================
+        function buildNodes() {
+            const N = nodesData.length;
+            const radius = 320;
+
+            nodesData.forEach((node, i) => {
+                // 使用 Fibonacci 球體算法
+                const phi = Math.acos(1 - 2 * (i + 0.5) / N);
+                const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+
+                const x = radius * Math.sin(phi) * Math.cos(theta);
+                const y = radius * Math.cos(phi);
+                const z = radius * Math.sin(phi) * Math.sin(theta);
+
+                const texture = createCardTexture(node.name, node.type, node.desc, false);
+                const material = new THREE.MeshBasicMaterial({
+                    map: texture,
+                    transparent: true,
+                    depthWrite: true,
+                    side: THREE.DoubleSide,
+                });
+                const geometry = new THREE.PlaneGeometry(150, 80);
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(x, y, z);
+                mesh.userData = {
+                    id: node.id,
+                    name: node.name,
+                    type: node.type,
+                    desc: node.desc,
+                    links: node.links,
+                    baseScale: 1,
+                };
+                mesh.scale.set(1, 1, 1);
+                scene.add(mesh);
+                meshes.push(mesh);
+                meshMap.set(node.id, mesh);
+            });
+        }
+
+        // ============================================================
+        //  建立關聯線 (所有節點間的關聯)
+        // ============================================================
+        function buildLines() {
+            const drawnSet = new Set();
+            for (const node of nodesData) {
+                for (const link of node.links) {
+                    const targetId = link.targetId;
+                    const key = [node.id, targetId].sort().join('-');
+                    if (drawnSet.has(key)) continue;
+                    drawnSet.add(key);
+
+                    const from = meshMap.get(node.id);
+                    const to = meshMap.get(targetId);
+                    if (!from || !to) continue;
+
+                    const p1 = from.position.clone();
+                    const p2 = to.position.clone();
+                    const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+                    const dir = new THREE.Vector3().subVectors(p2, p1).normalize();
+                    const perp = new THREE.Vector3(-dir.y, dir.x, dir.z).normalize();
+                    const offset = 20 + Math.random() * 30;
+                    mid.add(perp.multiplyScalar(offset));
+
+                    const curve = new THREE.QuadraticBezierCurve3(p1, mid, p2);
+                    const pts = curve.getPoints(28);
+
+                    const geom = new THREE.BufferGeometry().setFromPoints(pts);
+                    const mat = new THREE.LineBasicMaterial({
+                        color: 0x5a5a8a,
+                        transparent: true,
+                        opacity: 0.25,
+                        blending: THREE.AdditiveBlending,
+                    });
+                    const line = new THREE.Line(geom, mat);
+                    lineGroup.add(line);
+
+                    const glowMat = new THREE.LineBasicMaterial({
+                        color: 0x8b7bf7,
+                        transparent: true,
+                        opacity: 0.08,
+                        blending: THREE.AdditiveBlending,
+                    });
+                    const glowLine = new THREE.Line(geom.clone(), glowMat);
+                    lineGroup.add(glowLine);
+
+                    // 標籤 (顯示關聯分數)
+                    const labelDiv = document.createElement('div');
+                    labelDiv.className = 'relation-label';
+                    labelDiv.innerHTML = `
+                        <span class="rel-type">${link.relation}</span>
+                        <span class="score">${(link.score * 100).toFixed(0)}%</span>
+                    `;
+                    const labelObj = new CSS2DObject(labelDiv);
+                    labelObj.position.copy(mid);
+                    labelGroup.add(labelObj);
+                }
+            }
+        }
+
+        // ============================================================
+        //  展開 / 收起卡片
+        // ============================================================
+        function toggleExpand(id) {
+            const mesh = meshMap.get(id);
+            if (!mesh) return;
+            const node = nodesData.find(n => n.id === id);
+            if (!node) return;
+
+            // 如果已經展開這個卡片，則收起
+            if (expandedId === id) {
+                // 收起
+                const texture = createCardTexture(node.name, node.type, node.desc, false);
+                mesh.material.map = texture;
+                mesh.material.needsUpdate = true;
+                mesh.scale.set(1, 1, 1);
+                // 調整幾何大小 (恢復)
+                // 因為我們改變了紋理，但幾何不變，所以不用改
+                expandedId = null;
+                // 面板可關閉
+                panel.classList.remove('active');
+                // 側邊欄取消高亮
+                document.querySelectorAll('#nav-list li').forEach(el => {
+                    el.classList.toggle('active', false);
+                });
+                return;
+            }
+
+            // 否則收起之前展開的
+            if (expandedId !== null) {
+                const prevMesh = meshMap.get(expandedId);
+                const prevNode = nodesData.find(n => n.id === expandedId);
+                if (prevMesh && prevNode) {
+                    const tex = createCardTexture(prevNode.name, prevNode.type, prevNode.desc, false);
+                    prevMesh.material.map = tex;
+                    prevMesh.material.needsUpdate = true;
+                    prevMesh.scale.set(1, 1, 1);
+                }
+                // 取消面板
+                panel.classList.remove('active');
+                document.querySelectorAll('#nav-list li').forEach(el => {
+                    el.classList.toggle('active', false);
+                });
+            }
+
+            // 展開當前卡片
+            const texture = createCardTexture(node.name, node.type, node.desc, true);
+            mesh.material.map = texture;
+            mesh.material.needsUpdate = true;
+            mesh.scale.set(1.6, 1.6, 1.6); // 放大
+
+            expandedId = id;
+
+            // 更新側邊欄高亮
+            document.querySelectorAll('#nav-list li').forEach(el => {
+                el.classList.toggle('active', el.dataset.id === String(id));
+            });
+
+            // 更新詳情面板
+            updateDetailPanel(id);
+        }
+
+        // ============================================================
+        //  更新詳情面板
+        // ============================================================
+        function updateDetailPanel(focusId) {
+            const node = nodesData.find(n => n.id === focusId);
+            if (!node) return;
+            panelTitle.textContent = node.name;
+            panelType.textContent = node.type;
+            panelType.style.color = colorForType(node.type);
+            panelDesc.textContent = node.desc;
+
+            // 收起上一個節點展開時留下的 belief 查詢結果
+            const bd = document.getElementById('belief-detail');
+            bd.classList.remove('active');
+
+            relationList.innerHTML = '';
+            if (node.links.length === 0) {
+                relationList.innerHTML = '<div style="color:rgba(255,255,255,0.15);font-size:13px;">無關聯</div>';
+            } else {
+                for (const link of node.links) {
+                    const target = nodesData.find(n => n.id === link.targetId);
+                    if (!target) continue;
+                    const div = document.createElement('div');
+                    div.className = 'panel-relation-item rel-belief-trigger';
+                    div.title = '點擊查詢認知系統對這個關係的即時判斷';
+                    div.innerHTML = `
+                        <span>${target.name}</span>
+                        <span>
+                            <span class="rel-type">${link.relation}</span>
+                            <span class="score">${(link.score * 100).toFixed(0)}%</span>
+                        </span>
+                    `;
+                    div.addEventListener('click', (ev) => {
+                        ev.stopPropagation(); // 避免冒泡到卡片本身觸發收合
+                        queryBelief(link.atomUid, target.name);
+                    });
+                    relationList.appendChild(div);
+                }
+            }
+            panel.classList.add('active');
+        }
+
+        // ============================================================
+        //  即時查詢 epistemic 認知系統對某個 Atom 的判斷（Query Contract）
+        // ============================================================
+        async function queryBelief(atomUid, targetName) {
+            const bd = document.getElementById('belief-detail');
+            const body = document.getElementById('belief-detail-body');
+            bd.classList.add('active');
+            body.innerHTML = `<div class="bd-loading">查詢「${targetName}」的支持/反駁證據中…</div>`;
+
+            try {
+                const res = await fetch(API_BASE + '/api/epistemic/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: '', atom: atomUid, context: {} }),
+                });
+                const belief = await res.json();
+
+                if (belief.abstained) {
+                    body.innerHTML = `<div class="bd-abstain">系統棄權：${belief.abstain_reason}<br>目前證據不足以支撐可靠判斷。</div>`;
+                    return;
+                }
+
+                const renderGroup = (label, cls, items) => {
+                    if (!items || !items.length) return '';
+                    return `<div class="bd-group">
+                        <div class="bd-group-label ${cls}">${label}（${items.length}）</div>
+                        ${items.map(o => `<div class="bd-obs">${o.obs} <span class="conf">信心 ${o.confidence}</span></div>`).join('')}
+                    </div>`;
+                };
+
+                body.innerHTML = `
+                    <div class="bd-uncertainty">不確定性：${belief.uncertainty}</div>
+                    ${renderGroup('支持', 'support', belief.support)}
+                    ${renderGroup('反駁', 'contradict', belief.contradiction)}
+                    ${renderGroup('歷史基線', '', belief.baseline)}
+                `;
+            } catch (e) {
+                body.innerHTML = `<div class="bd-abstain">查詢失敗：${(e.message||String(e)).replace(/</g,'&lt;')}</div>`;
+            }
+        }
+
+        // ============================================================
+        //  側邊欄
+        // ============================================================
+        function buildSidebar() {
+            navList.innerHTML = '';
+            nodesData.forEach(node => {
+                const li = document.createElement('li');
+                li.dataset.id = node.id;
+                const dot = document.createElement('span');
+                dot.className = 'dot';
+                dot.style.background = colorForType(node.type);
+                li.appendChild(dot);
+                li.appendChild(document.createTextNode(node.name));
+                li.addEventListener('click', () => {
+                    toggleExpand(node.id);
+                    if (window.innerWidth <= 820) {
+                        sidebar.classList.remove('open');
+                    }
+                });
+                navList.appendChild(li);
+            });
+        }
+
+        // ============================================================
+        //  點擊卡片 → 展開/收起
+        // ============================================================
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+
+        renderer.domElement.addEventListener('pointerdown', (e) => {
+            const rect = renderer.domElement.getBoundingClientRect();
+            const mx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            const my = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(new THREE.Vector2(mx, my), camera);
+            const intersects = raycaster.intersectObjects(meshes);
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                const id = hit.userData.id;
+                if (id !== undefined) {
+                    toggleExpand(id);
+                }
+            }
+        });
+
+        // 懸停效果 (僅放大一點)
+        let hoveredMesh = null;
+        renderer.domElement.addEventListener('pointermove', (e) => {
+            const rect = renderer.domElement.getBoundingClientRect();
+            const mx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            const my = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(new THREE.Vector2(mx, my), camera);
+            const intersects = raycaster.intersectObjects(meshes);
+            if (hoveredMesh) {
+                // 如果不是展開狀態，恢復scale為1；如果是展開狀態，保持1.6
+                const id = hoveredMesh.userData.id;
+                const isExpanded = (id === expandedId);
+                const s = isExpanded ? 1.6 : 1;
+                hoveredMesh.scale.set(s, s, s);
+                hoveredMesh = null;
+                renderer.domElement.style.cursor = 'default';
+            }
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                const id = hit.userData.id;
+                if (id !== undefined) {
+                    hoveredMesh = hit;
+                    const isExpanded = (id === expandedId);
+                    const s = isExpanded ? 1.6 : 1;
+                    // 懸停時稍微放大
+                    const hoverScale = s * 1.08;
+                    hit.scale.set(hoverScale, hoverScale, hoverScale);
+                    renderer.domElement.style.cursor = 'pointer';
+                }
+            }
+        });
+
+        // ============================================================
+        //  面板關閉
+        // ============================================================
+        panelClose.addEventListener('click', () => {
+            panel.classList.remove('active');
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') panel.classList.remove('active');
+        });
+
+        // ============================================================
+        //  移動端選單
+        // ============================================================
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+        });
+
+        // ============================================================
+        //  動畫循環
+        // ============================================================
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // 所有卡片面向相機
+            meshes.forEach(m => {
+                m.lookAt(camera.position);
+            });
+
+            // 星星旋轉
+            stars.rotation.y += 0.0001;
+            stars.rotation.x += 0.00003;
+
+            controls.update();
+
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+
+        animate();
+
+        // ============================================================
+        //  非同步初始化：讀取 epistemic 圖譜資料 → 建圖
+        //  （原本 demo 資料是寫死的陣列可以同步建圖；現在要等 API 回來，
+        //   所以 buildNodes/buildLines/buildSidebar 從這裡統一觸發，
+        //   animate() 仍然立刻開始跑，只是場景一開始是空的星空背景）
+        // ============================================================
+        async function initGraph() {
+            const statusEl = document.getElementById('map-status');
+            const msgEl    = document.getElementById('map-status-msg');
+            try {
+                nodesData = await fetchGraph();
+
+                if (!nodesData.length) {
+                    msgEl.innerHTML = `
+                        epistemic/ 裡目前還沒有 Entity/Atom 資料。<br>
+                        <span style="opacity:.6;font-size:11px">先在 1_Entities/、2_Atoms/ 裡建立卡片，或跑一次 Compiler 把 Inbox 草稿編譯進去</span>
+                    `;
+                    return; // 保留 loading 畫面上的訊息，不隱藏（沒有東西可畫）
+                }
+
+                buildNodes();
+                buildLines();
+                buildSidebar();
+                statusEl.classList.add('hidden');
+            } catch (e) {
+                msgEl.innerHTML = `
+                    無法讀取認知圖譜：<b>${(e.message || String(e)).replace(/</g,'&lt;')}</b><br>
+                    <span style="opacity:.6;font-size:11px">確認 Python epistemic 服務跟 Node 後端都已啟動（npm run dev:all）</span>
+                `;
+                statusEl.innerHTML = `
+                    <div class="msg" id="map-status-msg">${msgEl.innerHTML}</div>
+                    <button onclick="initGraph()">重試</button>
+                `;
+            }
+        }
+        // ============================================================
+        //  把 inline onclick/onchange 用到的函式掛到 window 上
+        //  ------------------------------------------------------------
+        //  這個檔案的 <script type="module"> 裡，頂層 function 宣告只在
+        //  模組自己的作用域裡，不會自動變成 window.xxx；但 HTML 屬性寫的
+        //  onclick="openExtractModal()" 是在全域作用域執行，找不到模組裡的
+        //  函式就會靜默失敗（按了完全沒反應，主控台會有 "xxx is not defined"）。
+        //  這是「筆記抽取為知識」按鈕一開始按了沒反應的真正原因，這裡統一補上。
+        // ============================================================
+        window.openExtractModal    = openExtractModal;
+        window.closeExtractModal   = closeExtractModal;
+        window.onExtractSourceChange = onExtractSourceChange;
+        window.submitExtraction    = submitExtraction;
+        window.openReviewModal     = openReviewModal;
+        window.closeReviewModal    = closeReviewModal;
+        window.toggleDraftDetail   = toggleDraftDetail;
+        window.approveDraft        = approveDraft;
+        window.rejectDraft         = rejectDraft;
+        window.runCompile          = runCompile;
+        window.initGraph           = initGraph;
+
+        initGraph();
+
+        // ============================================================
+        //  響應式
+        // ============================================================
+        function onResize() {
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+            labelRenderer.setSize(w, h);
+        }
+
+        window.addEventListener('resize', onResize);
+        const resizeObserver = new ResizeObserver(() => onResize());
+        resizeObserver.observe(container);
+
+        // ============================================================
+        //  控制台
+        // ============================================================
+        console.log('🧠 認知系統 · 卡片展開模式');
+        console.log('💡 點擊卡片展開/收起，再次點擊收起');
+        window.__toggle = toggleExpand;
+    </script>
+</body>
+</html>
