@@ -238,6 +238,19 @@ wiki map（CLI 瀏覽 docs/ 目錄樹）與 HUD 的 M 鍵是不同功能，此�
 
 草稿審查的「核准」與「編譯」為兩步驟操作，避免誤觸導致未經完整驗證即寫入正式層。
 
-## 授權
 
-本專案採用 CC BY-NC-SA 4.0，詳見 application/README.md 底部之完整條款。
+# License
+
+Source Code
+
+AGPL-3.0
+
+Knowledge Base
+
+CC BY-NC-SA 4.0
+
+Commercial Licensing
+
+Commercial licenses are available.
+
+See COMMERCIAL_LICENSE.md
