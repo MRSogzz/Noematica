@@ -75,6 +75,4 @@
     },
     "description": "語意向量化模組。將 token 陣列轉換為高維語意嵌入向量。\n預設使用 OpenAI text-embedding-3-small（1536 維）。"
   }
-}�）。"
-  }
 }

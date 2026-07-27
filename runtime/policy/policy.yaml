@@ -73,3 +73,19 @@ activation_queue:
   medium_min: 0.40   # 0.40~0.70 → Medium（對應 abstention 的「需附警語」邊界）
   weak_min: 0.15     # 0.15~0.40 → Weak；< 0.15 直接算 Hidden，不列進 Queue（低於雜訊門檻）
   max_layer: 4       # Orbit 最多展開幾層（滑鼠滾輪 Layer+1 的上限，避免無限展開）
+
+# 10. Confidence Engine：證據信心與推論信心分離（runtime/policy/confidence_engine.py）
+#     取代原本分散在 activation_engine.py / adapter.py / correlation_engine.py 三處、
+#     彼此不一致的信心算法。Atom 類型的推論可靠度沿用上面 confidence_decay.derived_cap，
+#     跳數懲罰沿用下面 path_confidence.depth_penalty_per_hop，這裡不重複定義同一件事。
+confidence_engine:
+  evidence:
+    prior_mean: 0.5       # μ_prior：貝氏收斂平均的先驗信心，樣本稀疏時的保守預設
+    prior_strength: 2.0   # κ：先驗強度，越大代表要越多獨立來源佐證才會脫離 prior
+    cluster_power: 1.0    # 獨立叢集（來源）之間的冪平均 p：1=算術平均、0=幾何平均、-1=調和平均
+  inference:
+    default_type_reliability: 0.5   # 找不到對應 confidence_decay.derived_cap 時的預設可靠度
+  combine_mode: multiply   # multiply（預設，見模組說明）或 weighted_geometric
+  combine_weights:         # combine_mode: weighted_geometric 時才會用到
+    evidence: 0.5
+    inference: 0.5

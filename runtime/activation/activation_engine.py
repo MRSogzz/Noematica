@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # runtime/
 from common import find_repo_root, find_kb_root, scan_layer  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "policy"))  # runtime/policy/
 import policy_engine as pe  # noqa: E402
+import confidence_engine as ce  # noqa: E402
 
 
 def find_candidate_entities(entities_full: list, query: str) -> list[str]:
@@ -101,16 +102,18 @@ def activate(repo_root: Path, query: str = "", atom: str | None = None,
         activated = [(fm, 1.0) for fm in all_obs_for_atoms]
     result["mode"] = mode
 
-    # Step 3: confidence（套用 confidence_decay cap，依各自 Atom.type）
-    confidences = []
-    for fm, _ in activated:
-        raw = float((fm.get("confidence", {}) or {}).get("value", 0) or 0)
-        atom_fm = atoms_by_uid.get(fm.get("atom"), {})
-        capped = pe.confidence_decay_cap(policy, atom_fm.get("type", ""), raw)
-        confidences.append(capped)
-
-    path_conf = pe.path_confidence(policy, confidences, hops=1)
+    # Step 3: confidence（證據信心 × 推論信心，見 confidence_engine.py；
+    #    取代舊版「逐筆套用 confidence_decay cap 再取 min」的做法——
+    #    現在改成：證據信心只看 activated 觀測本身（含叢集去重、貝氏收斂平均、
+    #    立場內聚性），推論信心只看牽涉到的 Atom 類型，兩者分開算完再相乘，
+    #    數字跟 Orbit 面板 / CLI 認知查詢會是同一套邏輯算出來的）
+    activated_obs = [fm for fm, _ in activated]
+    atom_types = sorted({atoms_by_uid.get(fm.get("atom"), {}).get("type", "") for fm in activated_obs})
+    ev_detail = ce.evidence_confidence_detail(activated_obs, policy)
+    inf_detail = ce.inference_confidence_detail(atom_types, policy)
+    path_conf = ce.combine_confidence(ev_detail["score"], inf_detail["score"], policy)
     result["path_confidence"] = round(path_conf, 3)
+    result["confidence_detail"] = {"evidence": ev_detail, "inference": inf_detail}
 
     avg_context_match = (sum(r for _, r in activated) / len(activated)) if activated else 0.0
     abstain, reason = pe.should_abstain(policy, path_conf, len(activated), avg_context_match)

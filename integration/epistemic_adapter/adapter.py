@@ -38,6 +38,7 @@ import reasoning_engine as re_  # noqa: E402
 import policy_engine as pe  # noqa: E402
 import note_extractor as ne  # noqa: E402
 import correlation_engine as ce  # noqa: E402
+import confidence_engine as cfe  # noqa: E402  # ce 已經被 correlation_engine 佔用，這裡改用 cfe
 import inbox_review as ir  # noqa: E402
 from common import scan_layer, epoch_to_date, read_tsv  # noqa: E402
 
@@ -178,22 +179,26 @@ def _extract_description(body: str) -> str:
 
 
 def _compute_atom_scores(observations: list, atoms: list, policy: dict) -> dict[str, float]:
-    """依 Atom 分組計算平均信心，套用 confidence_decay 上限。多個地方共用，避免重算。"""
-    conf_by_atom: dict[str, list] = defaultdict(list)
+    """依 Atom 分組計算信心分數。改呼叫 confidence_engine（證據信心 × 推論信心），
+    取代原本「簡單平均再套 confidence_decay cap」的做法——這是 Orbit 面板 edge score
+    的來源，也是 CLI/API 認知查詢共用的同一份邏輯，兩邊數字才會一致。
+    多個地方共用這個函式，避免重算。"""
+    obs_by_atom: dict[str, list] = defaultdict(list)
     for _, fm, _ in observations:
         atom_uid = fm.get("atom")
-        conf = (fm.get("confidence") or {}).get("value")
-        if atom_uid and conf is not None:
-            try:
-                conf_by_atom[atom_uid].append(float(conf))
-            except (TypeError, ValueError):
-                pass
+        if atom_uid:
+            obs_by_atom[atom_uid].append(fm)
     scores = {}
     for _, fm, _ in atoms:
         atom_uid, atom_type = fm.get("uid"), fm.get("type", "")
-        confs = conf_by_atom.get(atom_uid, [])
-        raw_score = sum(confs) / len(confs) if confs else 0.5
-        scores[atom_uid] = round(pe.confidence_decay_cap(policy, atom_type, raw_score), 3)
+        atom_obs = obs_by_atom.get(atom_uid, [])
+        if not atom_obs:
+            inf = cfe.inference_confidence([atom_type], policy)
+            scores[atom_uid] = round(cfe.combine_confidence(0.5, inf, policy), 3)
+            continue
+        ev = cfe.evidence_confidence(atom_obs, policy)
+        inf = cfe.inference_confidence([atom_type], policy)
+        scores[atom_uid] = round(cfe.combine_confidence(ev, inf, policy), 3)
     return scores
 
 
@@ -305,11 +310,12 @@ def handle_orbit(center: str, max_layer: int | None = None) -> dict:
     兩件事分開算，語義不同：
       - layers：純粹依「跳數」分層（Layer 0 = center 自己，Layer 1 = 直接相鄰...），
         給 Orbit 的同心圓佈局用，滑鼠滾輪 Layer+1 就是多展開一層。
-      - queue：依 Path Confidence（min(edge_score 沿途) * depth_penalty^(hops-1)，
-        跟 policy_engine.path_confidence() 同一個公式，不是另外發明）分成
-        Strong/Medium/Weak/Hidden 四桶，給左側 Activation Queue 排序用——
-        距離遠但沿途信心都很高的實體，排名可能比距離近但信心低的實體更前面，
-        這是刻意的，因為它反映的是「這個關聯有多可信」，不是純粹的空間距離。
+      - queue：依 Path Confidence（min(edge_score 沿途) * depth_penalty^(hops-1)）分成
+        Strong/Medium/Weak/Hidden 四桶，給左側 Activation Queue 排序用——edge_score
+        本身來自 confidence_engine.py（證據信心 × 推論信心，跟 CLI/API 認知查詢、
+        Explain 面板同一份邏輯），這裡只是在單一 Atom 的信心之上，再疊加多跳的
+        depth_penalty——距離遠但沿途信心都很高的實體，排名可能比距離近但信心低的
+        實體更前面，這是刻意的，因為它反映的是「這個關聯有多可信」，不是純粹的空間距離。
     """
     kb_root = REPO_ROOT / "epistemic"
     policy = pe.load_policy(REPO_ROOT)
@@ -445,19 +451,16 @@ def handle_explain(uid: str) -> dict:
         if fm.get("from") == uid or fm.get("to") == uid
     }
 
+    atom_type_by_uid = {fm.get("uid"): fm.get("type", "") for _, fm, _ in atoms}
     support, contradiction, baseline = [], [], []
-    all_confs = []
+    obs_fms = []
     for _, fm, _ in observations:
         if fm.get("atom") not in related_atom_uids:
             continue
         conf = (fm.get("confidence") or {}).get("value")
         entry = {"obs": fm.get("uid"), "atom": fm.get("atom"), "epoch": fm.get("epoch"),
                   "confidence": conf}
-        if conf is not None:
-            try:
-                all_confs.append(float(conf))
-            except (TypeError, ValueError):
-                pass
+        obs_fms.append(fm)
         stance = fm.get("stance")
         if stance == "support":
             support.append(entry)
@@ -466,9 +469,17 @@ def handle_explain(uid: str) -> dict:
         else:
             baseline.append(entry)
 
-    path_confidence = pe.path_confidence(policy, all_confs, hops=1) if all_confs else 0.0
+    # 跟 _compute_atom_scores() / activation_engine.py 共用同一份 confidence_engine，
+    # 證據信心（跨相關 Atom 的所有觀測）× 推論信心（牽涉到的 Atom 類型），數字才會一致。
+    if obs_fms:
+        atom_types = sorted({atom_type_by_uid.get(fm.get("atom"), "") for fm in obs_fms})
+        ev = cfe.evidence_confidence(obs_fms, policy)
+        inf = cfe.inference_confidence(atom_types, policy)
+        path_confidence = cfe.combine_confidence(ev, inf, policy)
+    else:
+        path_confidence = 0.0
     ab = policy.get("abstention", {})
-    abstained = (not all_confs) or path_confidence < ab.get("min_path_confidence", 0.4)
+    abstained = (not obs_fms) or path_confidence < ab.get("min_path_confidence", 0.4)
 
     return {
         "uid": uid,
@@ -476,7 +487,7 @@ def handle_explain(uid: str) -> dict:
         "support": support,
         "contradiction": contradiction,
         "baseline": baseline,
-        "uncertainty": round(1.0 - path_confidence, 3) if all_confs else 1.0,
+        "uncertainty": round(1.0 - path_confidence, 3) if obs_fms else 1.0,
         "abstained": abstained,
     }
 
