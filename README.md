@@ -1,6 +1,8 @@
 # Noematica
 
-一套以「知識卡片」為核心的人機協作認知架構，涵蓋結構化知識管理、LLM 輔助抽取與關聯分析、3D 認知地圖視覺化、以及完整的草稿審查閉環。
+Noematica is a Git-native cognitive operating system for structured knowledge management.
+
+It combines knowledge cards, LLM-assisted extraction, evidence tracking, activation-based reasoning, and human review into a unified workflow.
 ```
 ███╗   ██╗ ██████╗ ███████╗███╗   ███╗██████╗ ████████╗██╗ ██████╗██╗  ██╗
 ████╗  ██║██╔═══██╗██╔════╝████╗ ████║██╔══██╗╚══██╔══╝██║██╔════╝██║  ██║
@@ -8,6 +10,7 @@
 ██║╚██╗██║██║   ██║██╔══╝  ██║╚██╔╝██║██╔══██║   ██║   ██║██║     ██╔══██║
 ██║ ╚████║╚██████╔╝███████╗██║ ╚═╝ ██║██║  ██║   ██║   ██║╚██████╗██║  ██║
 ```
+Noematica 是一套以知識卡片為核心的 Git Native 認知系統，將知識管理、LLM 抽取、證據追蹤、Activation 推理以及人工審查整合成同一套工作流程。
 ---
 
 # 系統概述
@@ -33,12 +36,15 @@ integration/ 橋接層（epistemic_adapter HTTP 服務 + 合約定義）
 
 所有卡片皆以 Markdown + frontmatter 儲存於 `epistemic/` 對應目錄，版本由 Git 完整追蹤。
 
-## 3D 認知地圖（M 鍵）
+## 認知地圖 — Activation Orbit（M 鍵）
 
-- 以 Three.js 呈現 Entity 為節點、Atom 為連線
-- 連線標示關係類型與信心百分比（依政策計算）
-- 點擊節點展開/收合；點擊連線即時查詢支持／反駁證據及不確定性
-- Entity 類型顏色自動分配（常見類型固定色，其餘雜湊穩定色）
+- **搜尋**：依名稱／別名／uid／領域／類型篩選 Entity 與 Atom，取代「在 3D 圖裡用眼睛找卡片」
+- **Activation Queue（左側）**：以焦點實體為中心，沿知識圖譜計算每個可達實體的 **Path Confidence**（路徑上最弱一段的信心，乘以每多一跳的信心衰減係數），依信心分成 **Strong / Medium / Weak / Hidden** 四桶——**這是多跳（multi-hop）關聯查詢，已優化為不再侷限於單跳**
+- **Orbit（中央同心圓）**：以焦點實體為中心展開 Layer 0 / 1 / 2 / 3…，滑鼠滾輪展開／收合層數（層數上限由 `runtime/policy/policy.yaml` 的 `activation_queue.max_layer` 設定，預設 4 層）；點節點卡片可切換焦點並重新展開
+- **Explain 面板**：彙總該實體所有關聯 Atom 底下的證據（support／contradiction／baseline）
+- **Reasoning Path 面板**：計算並顯示從搜尋起點到目前焦點之間的最短路徑（敘事鏈，非最高信心路徑）
+- **Timeline 面板**：該實體所有關聯觀測依 epoch 分組呈現
+- 「筆記抽取」與「草稿審查」側欄按鈕（見下方兩節）仍在此面板中
 
 ## AI 知識整理（H 鍵，原 M 功能移至此）
 
@@ -93,13 +99,14 @@ integration/ 橋接層（epistemic_adapter HTTP 服務 + 合約定義）
 | 知識圖鑑 | F5 | `wiki doc` | `/api/docs/*` | `knowledge/docs/` |
 | 模組背包 | B | `wiki module` | `/api/modules/*` | `application/modules/*/README.md` |
 | AI 知識整理（原 M） | **H** | — | `/api/wiki/*` | 讀 `knowledge/docs/`，寫 `knowledge/wiki/` |
-| **認知地圖**（新） | **M** | — | `/api/epistemic/graph` | `epistemic/1_Entities` + `2_Atoms` |
-| 認知查詢 | （地圖點擊關聯） | `wiki epistemic query` | `/api/epistemic/query` | `epistemic/` 全部四層 |
+| **認知地圖 — Activation Orbit**（已優化，取代舊版 3D 圖） | **M** | — | `/api/epistemic/search`、`/domains`、`/orbit/:uid`、`/explain/:uid`、`/reasoning-path`、`/timeline/:uid` | `epistemic/1_Entities` + `2_Atoms` + `3_Observations` |
+| 認知查詢（單一 Atom，單跳） | — | `wiki epistemic query` | `/api/epistemic/query` | `epistemic/` 全部四層 |
 | 反饋 | — | `wiki epistemic feedback` | `/api/epistemic/feedback` | `epistemic/7_Query_History/` |
 | **筆記抽取**（新） | **M 面板側欄按鈕** | `wiki epistemic extract` | `/api/epistemic/extract` | 寫 `epistemic/0_Inbox/` |
 | **跨筆記關聯**（新） | — | `wiki epistemic correlate` | `/api/epistemic/correlate` | 寫 `epistemic/0_Inbox/` |
 | **草稿審查**（新） | **M 面板側欄按鈕** | `wiki epistemic inbox list\|approve\|reject\|compile` | `/api/epistemic/inbox*`、`/compile` | 讀寫 `epistemic/0_Inbox/`，編譯進四層正式資料 |
 | **LLM Provider 統一**（新） | （抽取 Modal 顯示目前 provider） | `--provider llama\|...` | `ai_config` 欄位 | `runtime/llm_client.py` |
+| 治理摘要 | M 面板頂欄提示 | — | `/api/epistemic/governance-summary` | `epistemic/` 全部四層 |
 | 知識庫索引重建 | — | — | — | `python3 runtime/indexer/index_builder.py` |
 | 治理稽核 | — | — | — | `python3 runtime/policy/governance_auditor.py` |
 | 草稿編譯 | **M 面板「審查」Modal 裡的編譯按鈕** | `wiki epistemic inbox compile` | `POST /api/epistemic/compile` | `python3 runtime/compiler/compiler.py`（三種介面共用同一份邏輯） |
@@ -114,12 +121,19 @@ integration/ 橋接層（epistemic_adapter HTTP 服務 + 合約定義）
 - **正式合約**（`integration/contracts/*.schema.json`）：Query、Belief、Feedback，確保前後端資料形狀一致
 - **API 端點**（Node 代理層）：
   - `GET /api/epistemic/health` — 檢查 Python 連線
-  - `POST /api/epistemic/query` — 認知查詢（回傳 Belief Contract）
+  - `POST /api/epistemic/query` — 單一 Atom 認知查詢，單跳（回傳 Belief Contract）
   - `POST /api/epistemic/feedback` — 寫入查詢歷史
-  - `GET /api/epistemic/graph` — 取得完整 Entity‑Atom 圖譜（供 3D 地圖使用）
+  - `GET /api/epistemic/graph` — 取得完整 Entity‑Atom 圖譜（供舊版 3D 地圖使用，已不建議依賴）
   - `POST /api/epistemic/extract` — 筆記抽取（需指定 LLM 配置）
   - `POST /api/epistemic/correlate` — 跨筆記關聯分析
   - `POST /api/epistemic/inbox/list` / `approve` / `reject` / `compile` — 草稿審查操作
+  - `GET /api/epistemic/domains` — 取得所有 domain（供 Orbit 搜尋篩選下拉選單）
+  - `GET /api/epistemic/search` — 依名稱／別名／uid／domain／type 搜尋 Entity 與 Atom（Orbit 面板入口）
+  - `GET /api/epistemic/orbit/:uid` — **Orbit 核心資料**：以 uid 為中心的 Layer 分層 + Activation Queue（多跳 Path Confidence 分桶）
+  - `GET /api/epistemic/explain/:uid` — 該實體所有關聯 Atom 的證據彙總（support／contradiction／baseline）
+  - `GET /api/epistemic/reasoning-path?from=&to=` — 兩實體間最短路徑（敘事鏈）
+  - `GET /api/epistemic/timeline/:uid` — 該實體關聯觀測依 epoch 分組
+  - `GET /api/epistemic/governance-summary` — 治理提示摘要（頂欄按鈕用）
 
 ---
 
@@ -220,17 +234,7 @@ my-knowledge-repo/
 
 ---
 
-Git 追蹤策略
-
-追蹤：`epistemic/`、`knowledge/`、`runtime/`、`integration/contracts/`、`application/`（不含 `node_modules/`）
-
-忽略：`runtime/cache/`、`epistemic/.index/runtime/`、`application/node_modules/`、`application/.env`、`application/.system/vector-cache.json` 等（見各層 `.gitignore`）
-
----
-
 ## 已知限制
-
-認知查詢（Activation Engine）目前僅支援單跳（直接相鄰的 Atom），不處理多跳間接關係。
 
 筆記抽取與關聯分析需依賴 LLM（Anthropic / OpenAI / 本機 llama）。若使用本機 llama，需自行啟動 llama-server 且端點與設定一致。
 
