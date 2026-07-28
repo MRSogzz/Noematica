@@ -34,11 +34,13 @@ sys.path.insert(0, str(REPO_ROOT / "runtime" / "policy"))
 sys.path.insert(0, str(REPO_ROOT / "runtime" / "extraction"))
 sys.path.insert(0, str(REPO_ROOT / "runtime" / "correlation"))
 sys.path.insert(0, str(REPO_ROOT / "runtime" / "compiler"))
+sys.path.insert(0, str(REPO_ROOT / "runtime" / "graph"))
 import reasoning_engine as re_  # noqa: E402
 import policy_engine as pe  # noqa: E402
 import note_extractor as ne  # noqa: E402
 import correlation_engine as ce  # noqa: E402
 import confidence_engine as cfe  # noqa: E402  # ce 已經被 correlation_engine 佔用，這裡改用 cfe
+import graph_engine as ge  # noqa: E402
 import inbox_review as ir  # noqa: E402
 from common import scan_layer, epoch_to_date, read_tsv  # noqa: E402
 
@@ -290,32 +292,20 @@ def handle_list_domains() -> dict:
     return {"domains": sorted(domains)}
 
 
-def _build_adjacency_with_scores(atoms: list, scores: dict[str, float]) -> dict[str, list[tuple[str, float, str, str]]]:
-    """無向鄰接表，每條邊帶分數跟 atom_uid/type，供 Orbit 展開跟 Reasoning Path 共用。
-    回傳 {uid: [(neighbor_uid, edge_score, atom_uid, atom_type), ...]}"""
-    adj: dict[str, list] = defaultdict(list)
-    for _, fm, _ in atoms:
-        frm, to, atom_uid, atom_type = fm.get("from"), fm.get("to"), fm.get("uid"), fm.get("type", "")
-        if not frm or not to:
-            continue
-        score = scores.get(atom_uid, 0.5)
-        adj[frm].append((to, score, atom_uid, atom_type))
-        adj[to].append((frm, score, atom_uid, atom_type))
-    return adj
-
-
 def handle_orbit(center: str, max_layer: int | None = None) -> dict:
-    """M 面板 Orbit 介面的核心資料來源。
+    """M 面板 Orbit 介面的核心資料來源。拓撲運算（分層、可達性）都交給
+    runtime/graph/graph_engine.py，這裡只負責：算 edge_score（confidence_engine）、
+    組裝成 Orbit 要的 JSON 形狀、依 policy 門檻分桶。
 
     兩件事分開算，語義不同：
       - layers：純粹依「跳數」分層（Layer 0 = center 自己，Layer 1 = 直接相鄰...），
-        給 Orbit 的同心圓佈局用，滑鼠滾輪 Layer+1 就是多展開一層。
+        給 Orbit 的同心圓佈局用，滑鼠滾輪 Layer+1 就是多展開一層——graph_engine.bfs_layers()。
       - queue：依 Path Confidence（min(edge_score 沿途) * depth_penalty^(hops-1)）分成
         Strong/Medium/Weak/Hidden 四桶，給左側 Activation Queue 排序用——edge_score
         本身來自 confidence_engine.py（證據信心 × 推論信心，跟 CLI/API 認知查詢、
-        Explain 面板同一份邏輯），這裡只是在單一 Atom 的信心之上，再疊加多跳的
-        depth_penalty——距離遠但沿途信心都很高的實體，排名可能比距離近但信心低的
-        實體更前面，這是刻意的，因為它反映的是「這個關聯有多可信」，不是純粹的空間距離。
+        Explain 面板同一份邏輯），拓撲傳播交給 graph_engine.weighted_reachability()。
+        距離遠但沿途信心都很高的實體，排名可能比距離近但信心低的實體更前面，
+        這是刻意的，因為它反映的是「這個關聯有多可信」，不是純粹的空間距離。
     """
     kb_root = REPO_ROOT / "epistemic"
     policy = pe.load_policy(REPO_ROOT)
@@ -332,21 +322,10 @@ def handle_orbit(center: str, max_layer: int | None = None) -> dict:
         raise FileNotFoundError(f"找不到實體：{center}")
 
     scores = _compute_atom_scores(observations, atoms, policy)
-    adjacency = _build_adjacency_with_scores(atoms, scores)
+    adjacency = ge.build_adjacency(atoms)
 
-    # ---- Layer：純跳數 BFS ----
-    layer_of: dict[str, int] = {center: 0}
-    frontier = [center]
-    for layer_num in range(1, max_layer + 1):
-        next_frontier = []
-        for node in frontier:
-            for neighbor, _score, _atom_uid, _atom_type in adjacency.get(node, []):
-                if neighbor not in layer_of:
-                    layer_of[neighbor] = layer_num
-                    next_frontier.append(neighbor)
-        if not next_frontier:
-            break
-        frontier = next_frontier
+    # ---- Layer：純跳數 BFS（拓撲交給 graph_engine，這裡只轉換成 Orbit 要的 JSON 形狀）----
+    layer_of = ge.bfs_layers(adjacency, center, max_layer)
 
     layers: list[list[dict]] = [[] for _ in range(max(layer_of.values(), default=0) + 1)]
     for uid, layer_num in layer_of.items():
@@ -375,28 +354,11 @@ def handle_orbit(center: str, max_layer: int | None = None) -> dict:
             "score": scores.get(atom_uid, 0.5),
         })
 
-    # ---- Queue：Path Confidence（沿最強路徑走到每個節點，取 min(edge_score) * depth_penalty^(hops-1)）----
-    best_path_conf: dict[str, float] = {center: 1.0}
-    best_hops: dict[str, int] = {center: 0}
-    frontier2 = [center]
-    visited_for_queue = {center}
-    for _ in range(max_layer):
-        next_frontier = []
-        for node in frontier2:
-            node_conf = best_path_conf[node]
-            node_hops = best_hops[node]
-            for neighbor, edge_score, _atom_uid, _atom_type in adjacency.get(node, []):
-                new_hops = node_hops + 1
-                new_conf = min(node_conf, edge_score) * (depth_penalty ** max(new_hops - 1, 0))
-                if neighbor not in best_path_conf or new_conf > best_path_conf[neighbor]:
-                    best_path_conf[neighbor] = new_conf
-                    best_hops[neighbor] = new_hops
-                if neighbor not in visited_for_queue:
-                    visited_for_queue.add(neighbor)
-                    next_frontier.append(neighbor)
-        frontier2 = next_frontier
-        if not frontier2:
-            break
+    # ---- Queue：Path Confidence（拓撲傳播交給 graph_engine.weighted_reachability，
+    #      這裡只算 edge_score 當輸入，並依 policy 門檻分桶）----
+    reachability = ge.weighted_reachability(adjacency, center, scores, max_layer, depth_penalty)
+    best_path_conf = {uid: r["confidence"] for uid, r in reachability.items()}
+    best_hops = {uid: r["hops"] for uid, r in reachability.items()}
 
     strong_min = aq_cfg.get("strong_min", 0.70)
     medium_min = aq_cfg.get("medium_min", 0.40)
@@ -507,48 +469,16 @@ def handle_reasoning_path(from_uid: str, to_uid: str) -> dict:
     if to_uid not in entity_by_uid:
         raise FileNotFoundError(f"找不到實體：{to_uid}")
 
-    adjacency: dict[str, set[str]] = defaultdict(set)
-    for _, fm, _ in atoms:
-        frm, to = fm.get("from"), fm.get("to")
-        if frm and to:
-            adjacency[frm].add(to)
-            adjacency[to].add(frm)
+    adjacency = ge.build_adjacency(atoms)
 
     if from_uid == to_uid:
         return {"path": [{"uid": from_uid, "name": entity_by_uid[from_uid].get("name", from_uid)}], "found": True}
 
     max_hops = policy.get("correlation_engine", {}).get("max_graph_hops", 5)
-    prev: dict[str, str] = {}
-    visited = {from_uid}
-    frontier = [from_uid]
-    found = False
-    for _ in range(max_hops):
-        next_frontier = []
-        for node in frontier:
-            for neighbor in adjacency.get(node, ()):
-                if neighbor in visited:
-                    continue
-                visited.add(neighbor)
-                prev[neighbor] = node
-                if neighbor == to_uid:
-                    found = True
-                    break
-                next_frontier.append(neighbor)
-            if found:
-                break
-        if found:
-            break
-        frontier = next_frontier
-        if not frontier:
-            break
+    path_uids = ge.bfs_shortest_path(adjacency, from_uid, to_uid, max_hops)
 
-    if not found:
+    if path_uids is None:
         return {"path": [], "found": False}
-
-    path_uids = [to_uid]
-    while path_uids[-1] != from_uid:
-        path_uids.append(prev[path_uids[-1]])
-    path_uids.reverse()
 
     return {
         "path": [{"uid": u, "name": entity_by_uid.get(u, {}).get("name", u)} for u in path_uids],

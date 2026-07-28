@@ -1,7 +1,7 @@
 {
   "id": "gamification",
-  "name": "原神",
-  "description": "仿原神 UI 風格，金色 HUD 主調",
+  "name": "自訂風格",
+  "description": "RPG UI 風格，暗金色 HUD 主調",
   "version": "1.0.0",
   "colors": {
     "accent":       "#E8C873",
@@ -19,14 +19,16 @@
     "hpColor2":     "#8BC34A"
   },
   "assets": {
-    "bg":           "assets/themes/gamification/bg/bg.jpg",
+    "bg":           "assets/themes/gamification/bg/bg.png",
     "minimap":      "assets/themes/gamification/minimap/minimap.png",
     "keys": {
       "f1":         "assets/themes/gamification/keys/key-f1.png",
       "f2":         "assets/themes/gamification/keys/key-f2.png",
       "f3":         "assets/themes/gamification/keys/key-f3.png",
       "f4":         "assets/themes/gamification/keys/key-f4.png",
+	  "f5":         "assets/themes/gamification/keys/key-f5.png",
       "b":          "assets/themes/gamification/keys/key-b.png",
+	  "h":          "assets/themes/gamification/keys/key-h.png",
       "m":          "assets/themes/gamification/keys/key-m.png"
     },
     "avatars": {

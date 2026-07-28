@@ -220,9 +220,77 @@ export function searchModules(query: string): ModuleMeta[] {
   );
 }
 
+// ── One-shot validation mode（CI 用，--validate-only）──────────────────────────
+//
+// 跟 startParser() 的差異：不用 chokidar，改成單純遞迴掃目錄一次就結束，
+// 不會撐住 event loop；而且格式不合規時會真的 exit(1)，不是只有 console.warn
+// （原本即使沒有 hang 住，也從來沒有真的擋過任何東西）。
+//
+// 刻意不沿用 chokidar 做一次性掃描：chokidar 3.x 在 persistent:false 搭配
+// glob pattern 時，'ready' 事件跟初始掃描完成的順序沒有保證——只要建立 watcher
+// 前多一個 await（例如這裡的 loadPersistedIndex()），'ready' 就可能搶在檔案被
+// 掃到之前觸發，導致漏判整批檔案（實測會重現）。watcher 本來就是為「持續監聽」
+// 設計的，拿來做「跑一次就結束」的驗證是拿錯工具，不是加參數調一調就能穩定。
+async function walkFiles(dir: string): Promise<string[]> {
+  let entries: fss.Dirent[];
+  try {
+    entries = await fs.readdir(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const files: string[] = [];
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await walkFiles(full)));
+    } else if (entry.isFile()) {
+      files.push(full);
+    }
+  }
+  return files;
+}
+
+async function findValidationTargets(): Promise<string[]> {
+  // 對應原本 WATCH_PATHS 的兩條規則：modules/**/README.md、docs/**/*.md
+  const moduleFiles = (await walkFiles('modules')).filter((f) => path.basename(f) === 'README.md');
+  const docFiles = (await walkFiles('docs')).filter((f) => f.endsWith('.md'));
+  return [...moduleFiles, ...docFiles];
+}
+
+async function runValidateOnce(): Promise<void> {
+  await loadPersistedIndex();
+
+  const targets = await findValidationTargets();
+  if (targets.length === 0) {
+    console.warn('[Parser] --validate-only 沒有掃到任何 Markdown 檔案，請確認 MODULES_DIR / DOCS_DIR 有沒有指對路徑。');
+  }
+
+  let hasError = false;
+  for (const filePath of targets) {
+    const meta = await parseModuleFile(filePath);
+    if (meta) {
+      console.log(`[Parser] ✓ ${filePath} — schema OK (#${meta.id} ${meta.name})`);
+    } else {
+      hasError = true;
+      console.error(`[Parser] ✗ ${filePath} — 缺少必要 YAML 欄位（id/name）或 //INPUT //OUTPUT block`);
+    }
+  }
+
+  if (hasError) {
+    console.error('[Parser] --validate-only 發現不合規的模組，CI 應該擋下這次合併。');
+    process.exit(1);
+  }
+  console.log('[Parser] --validate-only 全部模組通過 schema 檢查。');
+  process.exit(0);
+}
+
 // ── CLI entry (ESM-compatible) ────────────────────────────────────────────────
 
 const isMain = process.argv[1] && fss.realpathSync(process.argv[1]).includes('metadata-parser');
 if (isMain) {
-  startParser().catch(console.error);
+  if (process.argv.includes('--validate-only')) {
+    runValidateOnce().catch((err) => { console.error(err); process.exit(1); });
+  } else {
+    startParser().catch(console.error);
+  }
 }

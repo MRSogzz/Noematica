@@ -34,7 +34,6 @@ import argparse
 import json
 import re
 import sys
-from collections import defaultdict, deque
 from datetime import date
 from pathlib import Path
 
@@ -43,6 +42,8 @@ from common import find_repo_root, scan_layer, write_proposal  # noqa: E402
 from llm_client import call_llm  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "policy"))
 import policy_engine as pe  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "graph"))
+import graph_engine as ge  # noqa: E402
 
 VALID_ATOM_TYPES = {"causal", "correlation", "definition", "constraint", "heuristic", "analogy"}
 
@@ -95,38 +96,10 @@ def entity_overlap_score(entities_a: set[str], entities_b: set[str]) -> dict:
 
 
 # ============================================================
-# 維度二：Graph Distance
+# 維度二：Graph Distance（鄰接表/BFS 邏輯已收斂到 runtime/graph/graph_engine.py，
+# 這裡只保留跟這個維度語義相關的部分：怎麼挑錨點、怎麼把距離換算成分數）
 # ============================================================
-def build_adjacency(atoms: list) -> dict[str, set[str]]:
-    """無向圖鄰接表——距離是「概念上的接近程度」，不管因果方向。"""
-    adj: dict[str, set[str]] = defaultdict(set)
-    for _, fm, _ in atoms:
-        frm, to = fm.get("from"), fm.get("to")
-        if frm and to:
-            adj[frm].add(to)
-            adj[to].add(frm)
-    return adj
-
-
-def shortest_path(adj: dict[str, set[str]], start: str, end: str, max_hops: int) -> int | None:
-    if start == end:
-        return 0
-    visited = {start}
-    queue = deque([(start, 0)])
-    while queue:
-        node, dist = queue.popleft()
-        if dist >= max_hops:
-            continue
-        for neighbor in adj.get(node, ()):
-            if neighbor == end:
-                return dist + 1
-            if neighbor not in visited:
-                visited.add(neighbor)
-                queue.append((neighbor, dist + 1))
-    return None
-
-
-def graph_distance_score(adj: dict[str, set[str]], entities_a: set[str], entities_b: set[str],
+def graph_distance_score(adj: "ge.Adjacency", entities_a: set[str], entities_b: set[str],
                           max_hops: int) -> dict:
     """找兩組實體之間最短的一條路徑（取所有配對裡最近的），回傳分數與是哪一對錨點實體。
 
@@ -144,7 +117,7 @@ def graph_distance_score(adj: dict[str, set[str]], entities_a: set[str], entitie
             for b in set_b:
                 if a == b:
                     continue
-                d = shortest_path(adj, a, b, max_hops)
+                d = ge.bfs_distance(adj, a, b, max_hops)
                 if d is not None and (best is None or d < best[2]):
                     best = (a, b, d)
         return best
@@ -202,7 +175,7 @@ def compute_correlation(repo_root: Path, text_a: str, title_a: str,
 
     entities = {fm.get("uid"): fm for _, fm, _ in scan_layer(kb_root, "1_Entities") if fm.get("uid")}
     atoms = scan_layer(kb_root, "2_Atoms")
-    adj = build_adjacency(atoms)
+    adj = ge.build_adjacency(atoms)
 
     ents_a = find_entities_in_text(text_a, entities)
     ents_b = find_entities_in_text(text_b, entities)
