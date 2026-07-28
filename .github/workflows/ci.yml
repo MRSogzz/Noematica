@@ -87,6 +87,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: schema-validate
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write   # 這個 job 需要 git push 寫回結果，其他 job（typecheck/schema-validate/vector-rebuild）
+                         # 都只是讀取，不用給——最小權限原則。這裡宣告的是「上限」，如果 repo 層級
+                         # Settings → Actions → General → Workflow permissions 設的是唯讀，這裡宣告了也沒用，
+                         # 那邊的設定才是真正的天花板，見下方 CI 錯誤說明。
     steps:
       - uses: actions/checkout@v4
         with:
