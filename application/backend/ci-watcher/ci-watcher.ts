@@ -6,8 +6,12 @@
  *       2. 將結果寫回對應模組的 README.md（更新 status 與 latency）
  *       3. 生成 Git commit：[ci] update module#XXX status=DONE lat=Xms
  *
- * 使用方式（CLI）：
+ * 使用方式（CLI，指定單一模組）：
  *   npm run ci-writeback -- --module=1 --status=DONE --latency=~4ms --name=schemaVal
+ *
+ * 使用方式（CLI，自動偵測這次 push 改了哪些模組，見 ci.yml）：
+ *   npm run ci-writeback -- --detect-changed --base=<beforeSha> --head=<sha> --status=DONE
+ *   ——用 git diff 找出這次變更範圍內的 modules/*\/README.md，一個模組寫回一次。
  *
  * 使用方式（程式呼叫）：
  *   import { writebackResult } from './ci-watcher.js';
@@ -142,6 +146,105 @@ export async function writebackResult(result: CIResult): Promise<void> {
   gitCommitWriteback(result, readmePath);
 }
 
+// ── Changed-module detection ────────────────────────────────────────────────
+//
+// ci.yml 原本傳 --module-id="${{ github.event.head_commit.message }}"——commit
+// message 不是模組 ID，這裡改成真的用 git diff 找出這次 push 改了哪些
+// modules/*/README.md，再從 frontmatter 讀出正確的數字 id，一個模組寫回一次。
+
+interface ChangedModule {
+  moduleId:   number;
+  moduleName: string;
+  readmePath: string;
+}
+
+const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'; // git 內建的「空樹」物件，第一個 commit 時拿來當 diff 基準
+
+function resolveDiffBase(requestedBase: string | undefined): string {
+  const isUsable = (sha: string | undefined): sha is string =>
+    !!sha && sha.trim() !== '' && !/^0+$/.test(sha.trim());
+
+  if (isUsable(requestedBase)) return requestedBase;
+
+  // github.event.before 在「新分支第一次 push」時會是全 0 的 sha，這種情況沒有
+  // 上一個 commit 可比，改用 git 的空樹物件當基準（等同於「這個 commit 的所有
+  // 檔案都算變更」），而不是直接讓 git diff 失敗噴錯。
+  try {
+    execSync('git rev-parse HEAD~1', { stdio: 'pipe' });
+    return 'HEAD~1';
+  } catch {
+    return EMPTY_TREE_SHA;
+  }
+}
+
+function findChangedModules(base: string | undefined, head: string): ChangedModule[] {
+  const diffBase = resolveDiffBase(base);
+
+  let changedFiles: string[];
+  try {
+    // --relative：git diff --name-only 預設回傳「相對 repo 根目錄」的路徑，
+    // 但這支腳本在 CI 裡是從 application/ 這個子目錄執行的（ci.yml 設了
+    // working-directory: application），兩者對不上會導致下面 existsSync 全部
+    // 落空、誤判成「沒有模組變更」——實測抓到過這個問題，不是理論上的邊界案例。
+    const raw = execSync(`git diff --name-only --relative ${diffBase} ${head} -- modules/`, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).toString('utf-8');
+    changedFiles = raw.split('\n').map((l) => l.trim()).filter(Boolean);
+  } catch (err) {
+    console.error(`[CI Watcher] git diff 失敗（base=${diffBase} head=${head}）：${(err as Error).message}`);
+    return [];
+  }
+
+  const changedDirs = Array.from(new Set(changedFiles.map((f) => path.dirname(f))));
+  const modules: ChangedModule[] = [];
+
+  for (const dir of changedDirs) {
+    const readmePath = path.join(dir, 'README.md');
+    if (!fss.existsSync(readmePath)) continue; // 這個模組資料夾這次改的不是 README.md 本身（例如只改了程式碼），沒有 frontmatter 可讀，略過
+
+    try {
+      const raw = fss.readFileSync(readmePath, 'utf-8');
+      const { data } = matter(raw);
+      const id = Number(data['id']);
+      if (!Number.isFinite(id)) {
+        console.warn(`[CI Watcher] ${readmePath} 的 frontmatter 沒有合法的 id，略過。`);
+        continue;
+      }
+      modules.push({ moduleId: id, moduleName: String(data['name'] ?? `module-${id}`), readmePath });
+    } catch (err) {
+      console.warn(`[CI Watcher] 讀取 ${readmePath} frontmatter 失敗，略過：${(err as Error).message}`);
+    }
+  }
+
+  return modules;
+}
+
+async function detectAndWriteback(args: Record<string, string>): Promise<void> {
+  const status = (args['status'] as ModuleStatus) ?? 'DONE';
+  const head = args['head'] ?? args['commit-sha'] ?? 'HEAD';
+  const modules = findChangedModules(args['base'], head);
+
+  if (modules.length === 0) {
+    console.log('[CI Watcher] 這次 push 沒有偵測到 modules/ 底下的 README.md 變更，略過 writeback。');
+    return;
+  }
+
+  console.log(`[CI Watcher] 偵測到 ${modules.length} 個模組有變更：${modules.map((m) => `#${m.moduleId}(${m.moduleName})`).join(', ')}`);
+
+  for (const m of modules) {
+    await writebackResult({
+      moduleId:    m.moduleId,
+      moduleName:  m.moduleName,
+      status,
+      latency:     args['latency'] ?? '~?ms',
+      testsPassed: Number(args['pass'] ?? 0),
+      testsFailed: Number(args['fail'] ?? 0),
+      capturedAt:  new Date().toISOString(),
+      notes:       args['notes'] ?? (args['commit-sha'] ? `commit ${args['commit-sha']}` : undefined),
+    });
+  }
+}
+
 // ── CLI entry (ESM-compatible) ────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -156,11 +259,17 @@ async function main(): Promise<void> {
       })
   ) as Record<string, string>;
 
+  if (args['detect-changed']) {
+    await detectAndWriteback(args);
+    return;
+  }
+
   if (!args['module'] || !args['status']) {
     console.error(
-      'Usage: npm run ci-writeback -- ' +
-      '--module=<id> --status=<DONE|WIP|BLOCKED> ' +
-      '[--latency=~Xms] [--name=<moduleName>] [--pass=N] [--fail=N]'
+      'Usage:\n' +
+      '  npm run ci-writeback -- --module=<id> --status=<DONE|WIP|BLOCKED> ' +
+      '[--latency=~Xms] [--name=<moduleName>] [--pass=N] [--fail=N]\n' +
+      '  npm run ci-writeback -- --detect-changed --base=<sha> --head=<sha> --status=<DONE|WIP|BLOCKED>'
     );
     process.exit(1);
   }

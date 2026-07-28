@@ -107,7 +107,10 @@ jobs:
         run: |
           echo "Measuring real I/O latency for changed modules..."
           npm run ci-writeback -- \
-            --module-id="${{ github.event.head_commit.message }}" \
+            --detect-changed \
+            --base="${{ github.event.before }}" \
+            --head="${{ github.sha }}" \
+            --status=DONE \
             --commit-sha="${{ github.sha }}"
         env:
           MODULES_DIR:   ./modules
