@@ -39,6 +39,7 @@ def build_atoms(kb_root: Path):
     for path, fm, _ in scan_layer(kb_root, "2_Atoms"):
         uid = fm.get("uid", "")
         abstraction = fm.get("abstraction", {}) or {}
+        lifecycle = fm.get("lifecycle", {}) or {}
         rows.append([
             uid,
             fm.get("from", ""),
@@ -46,10 +47,11 @@ def build_atoms(kb_root: Path):
             fm.get("type", ""),
             fm.get("status", ""),
             abstraction.get("level", ""),
+            lifecycle.get("last_review", ""),
         ])
         atoms_by_uid[uid] = fm
     write_tsv(kb_root / ".index/generated/atoms.tsv",
-              ["uid", "from", "to", "type", "status", "abstraction_level"], rows)
+              ["uid", "from", "to", "type", "status", "abstraction_level", "lifecycle_last_review"], rows)
     return rows, atoms_by_uid
 
 
@@ -73,6 +75,11 @@ def build_observations(kb_root: Path):
             d = ctx.get(name, {}) or {}
             return f"{d.get('value','')}|{d.get('confidence','')}"
 
+        # evidence 用 ";" 串接：來源是 wikilink 路徑（例如 [[4_Sources/xxx.md]]），
+        # 不會出現分號，跟其他欄位共用的 "|" 也不會撞。confidence_engine.py 的
+        # 證據來源分群（避免同一來源被算成多筆獨立證據）就是靠這個欄位，之前
+        # 索引沒收錄這個欄位，是這次接上索引前才發現、順便補上的缺口。
+        evidence = fm.get("evidence") or []
         rows.append([
             fm.get("uid", ""),
             fm.get("atom", ""),
@@ -86,12 +93,13 @@ def build_observations(kb_root: Path):
             fm.get("probability", ""),
             fm.get("stance", ""),
             (fm.get("confidence", {}) or {}).get("value", ""),
+            ";".join(str(e) for e in evidence),
         ])
         obs_by_uid[fm.get("uid", "")] = fm
     write_tsv(kb_root / ".index/generated/observations.tsv",
               ["uid", "atom_uid", "epoch", "market_regime", "monetary_policy",
                "liquidity", "inflation", "geopolitical", "impact", "probability",
-               "stance", "confidence_value"], rows)
+               "stance", "confidence_value", "evidence"], rows)
     return rows, obs_by_uid
 
 

@@ -42,7 +42,7 @@ import correlation_engine as ce  # noqa: E402
 import confidence_engine as cfe  # noqa: E402  # ce 已經被 correlation_engine 佔用，這裡改用 cfe
 import graph_engine as ge  # noqa: E402
 import inbox_review as ir  # noqa: E402
-from common import scan_layer, epoch_to_date, read_tsv  # noqa: E402
+from common import scan_layer, load_entities, load_atoms, load_observations, parse_md, epoch_to_date, read_tsv  # noqa: E402
 
 
 def _load_schema(name: str) -> dict:
@@ -224,9 +224,12 @@ def handle_graph(center: str | None = None, hops: int = 2) -> dict:
     kb_root = REPO_ROOT / "epistemic"
     policy = pe.load_policy(REPO_ROOT)
 
+    # 這個端點本來就要回傳「每個」Entity 的描述全文，天生就要碰到每一份檔案，
+    # 用索引省不了什麼（索引也不含全文），直接用 scan_layer 比較單純；
+    # 而且這是已標記不建議依賴的舊版端點，不特別為它做最佳化。
     entities = scan_layer(kb_root, "1_Entities")
-    atoms = scan_layer(kb_root, "2_Atoms")
-    observations = scan_layer(kb_root, "3_Observations")
+    atoms = load_atoms(kb_root)
+    observations = load_observations(kb_root)
 
     nodes_by_uid: dict[str, dict] = {}
     for _, fm, body in entities:
@@ -285,7 +288,7 @@ def handle_list_domains() -> dict:
     domains 降級成搜尋的篩選條件之一，不再是獨立的「領域總覽」頁面——這是刻意的決定，
     domains 陣列本來的語義就是標籤／篩選條件，不是組織軸心，見 README 的設計討論。"""
     kb_root = REPO_ROOT / "epistemic"
-    entities = scan_layer(kb_root, "1_Entities")
+    entities = load_entities(kb_root)
     domains: set[str] = set()
     for _, fm, _ in entities:
         domains.update(fm.get("domains") or [])
@@ -313,9 +316,9 @@ def handle_orbit(center: str, max_layer: int | None = None) -> dict:
     depth_penalty = policy.get("path_confidence", {}).get("depth_penalty_per_hop", 0.9)
     max_layer = max_layer if max_layer is not None else aq_cfg.get("max_layer", 4)
 
-    entities = scan_layer(kb_root, "1_Entities")
-    atoms = scan_layer(kb_root, "2_Atoms")
-    observations = scan_layer(kb_root, "3_Observations")
+    entities = load_entities(kb_root)
+    atoms = load_atoms(kb_root)
+    observations = load_observations(kb_root)
 
     entity_by_uid = {fm.get("uid"): fm for _, fm, _ in entities if fm.get("uid")}
     if center not in entity_by_uid:
@@ -400,9 +403,9 @@ def handle_explain(uid: str) -> dict:
     證據都收斂在一起，因為 Orbit 的焦點是實體，不是單一關係。"""
     kb_root = REPO_ROOT / "epistemic"
     policy = pe.load_policy(REPO_ROOT)
-    entities = scan_layer(kb_root, "1_Entities")
-    atoms = scan_layer(kb_root, "2_Atoms")
-    observations = scan_layer(kb_root, "3_Observations")
+    entities = load_entities(kb_root)
+    atoms = load_atoms(kb_root)
+    observations = load_observations(kb_root)
 
     entity_by_uid = {fm.get("uid"): fm for _, fm, _ in entities if fm.get("uid")}
     if uid not in entity_by_uid:
@@ -460,8 +463,8 @@ def handle_reasoning_path(from_uid: str, to_uid: str) -> dict:
     直接找最短路徑並把沿途的節點序列回傳，前端負責畫成 A → B → C。"""
     kb_root = REPO_ROOT / "epistemic"
     policy = pe.load_policy(REPO_ROOT)
-    entities = scan_layer(kb_root, "1_Entities")
-    atoms = scan_layer(kb_root, "2_Atoms")
+    entities = load_entities(kb_root)
+    atoms = load_atoms(kb_root)
 
     entity_by_uid = {fm.get("uid"): fm for _, fm, _ in entities if fm.get("uid")}
     if from_uid not in entity_by_uid:
@@ -491,9 +494,9 @@ def handle_timeline(uid: str) -> dict:
     epoch 欄位在 Observation schema 裡本來就有，但目前沒有任何介面用過——
     這是它第一次被實際拿來用。"""
     kb_root = REPO_ROOT / "epistemic"
-    entities = scan_layer(kb_root, "1_Entities")
-    atoms = scan_layer(kb_root, "2_Atoms")
-    observations = scan_layer(kb_root, "3_Observations")
+    entities = load_entities(kb_root)
+    atoms = load_atoms(kb_root)
+    observations = load_observations(kb_root)
 
     entity_by_uid = {fm.get("uid"): fm for _, fm, _ in entities if fm.get("uid")}
     if uid not in entity_by_uid:
@@ -528,9 +531,9 @@ def handle_search(q: str = "", domain: str = "", type_filter: str = "", stale_on
     的 find_candidate_entities）。"""
     kb_root = REPO_ROOT / "epistemic"
     policy = pe.load_policy(REPO_ROOT)
-    entities = scan_layer(kb_root, "1_Entities")
-    atoms = scan_layer(kb_root, "2_Atoms")
-    observations = scan_layer(kb_root, "3_Observations")
+    entities = load_entities(kb_root)
+    atoms = load_atoms(kb_root)
+    observations = load_observations(kb_root)
     stale = _stale_atom_uids(kb_root)
 
     entity_by_uid = {fm.get("uid"): fm for _, fm, _ in entities if fm.get("uid")}
@@ -581,20 +584,19 @@ def handle_entity_detail(uid: str) -> dict:
     取代原本只能在 3D 圖裡點卡片才看得到的資訊。"""
     kb_root = REPO_ROOT / "epistemic"
     policy = pe.load_policy(REPO_ROOT)
-    entities = scan_layer(kb_root, "1_Entities")
-    atoms = scan_layer(kb_root, "2_Atoms")
-    observations = scan_layer(kb_root, "3_Observations")
+    entities = load_entities(kb_root)
+    atoms = load_atoms(kb_root)
+    observations = load_observations(kb_root)
     stale = _stale_atom_uids(kb_root)
 
     entity_by_uid = {fm.get("uid"): fm for _, fm, _ in entities if fm.get("uid")}
-    target = None
-    for _, fm, body in entities:
-        if fm.get("uid") == uid:
-            target = (fm, body)
-            break
-    if not target:
+    entity_path_by_uid = {fm.get("uid"): p for p, fm, _ in entities if fm.get("uid")}
+    if uid not in entity_by_uid:
         raise FileNotFoundError(f"找不到實體：{uid}")
-    fm, body = target
+    fm = entity_by_uid[uid]
+    # body 全文索引裡沒有，這裡只有「這一個」實體真的要顯示描述，直接現讀
+    # 這一份檔案就好，不需要為了一筆描述把整層實體掃過一輪找它。
+    _, body = parse_md(entity_path_by_uid[uid])
 
     scores = _compute_atom_scores(observations, atoms, policy)
     related = []

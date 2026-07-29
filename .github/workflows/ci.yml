@@ -164,3 +164,67 @@ jobs:
           name: vector-cache
           path: application/.system/vector-cache.json
           retention-days: 7
+
+  # ── Job 5: Rebuild epistemic index（Entities/Atoms/Observations 的 TSV 快照）─
+  #
+  # 跟其他 job 是完全不同的子系統：typecheck/schema-validate/ci-writeback/
+  # vector-rebuild 都是 application/ 底下的 TS「llm-wiki 模組文件」系統，
+  # 這個 job 管的是 epistemic/ 底下的 Python「知識卡片」系統（Entities/Atoms/
+  # Observations），兩邊互不相依，所以不設 needs，讓它獨立跑、不用等 TS 那邊。
+  #
+  # 為什麼要有這個 job：查詢路徑（activation_engine.py / adapter.py /
+  # correlation_engine.py）現在會優先讀 epistemic/.index/generated/*.tsv，
+  # 只有在偵測到索引比來源檔案舊時才 fallback 回全量掃描。這個 job 讓索引
+  # 自動跟著每次 push 到 main 重建，不用依賴每個開發者自己手動裝
+  # pre-commit.sample / pre-commit.ps1 這個 hook。
+  epistemic-index:
+    name: Rebuild Epistemic Index
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: .   # 覆蓋檔案最上面 workflow 層級的 application/ 預設——
+                                # runtime/ 跟 epistemic/ 都在 repo 根目錄，不在 application/ 底下
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run runtime self-tests
+        # 索引是「把知識庫攤平寫成 TSV」，如果核心引擎本身有問題，
+        # 不該把用壞掉的邏輯產生的索引提交回去，先擋一次。
+        run: |
+          python3 runtime/policy/policy_engine.py
+          python3 runtime/graph/graph_engine.py
+          python3 runtime/policy/confidence_engine.py
+
+      - name: Rebuild index
+        run: python3 runtime/indexer/index_builder.py
+
+      - name: Commit index if changed
+        run: |
+          git config user.name  "LLM WIKI CI Bot"
+          git config user.email "ci-bot@llm-wiki.dev"
+          git add epistemic/.index/generated/
+          if git diff --staged --quiet; then
+            echo "索引沒有變化，略過 commit。"
+            exit 0
+          fi
+          git commit -m "[ci] rebuild epistemic index (sha: ${{ github.sha }})"
+          # ci-writeback job 也會在同一次 workflow run 裡 push 到 main，兩個 job
+          # 沒有 needs 相依、可能並行執行——先 rebase 到目前的 origin/main 再 push，
+          # 避免其中一個因為對方先推上去而被拒絕（non-fast-forward）。
+          git pull --rebase origin main
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

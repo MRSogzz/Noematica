@@ -27,7 +27,7 @@ from pathlib import Path
 from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # runtime/
-from common import find_repo_root, find_kb_root, scan_layer  # noqa: E402
+from common import find_repo_root, find_kb_root, load_entities, load_atoms, load_observations  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "policy"))  # runtime/policy/
 import policy_engine as pe  # noqa: E402
 import confidence_engine as ce  # noqa: E402
@@ -59,9 +59,9 @@ def activate(repo_root: Path, query: str = "", atom: str | None = None,
     kb_root = repo_root / "epistemic"
     policy = pe.load_policy(repo_root)
 
-    entities_full = scan_layer(kb_root, "1_Entities")
-    atoms_full = scan_layer(kb_root, "2_Atoms")
-    obs_full = scan_layer(kb_root, "3_Observations")
+    entities_full = load_entities(kb_root)
+    atoms_full = load_atoms(kb_root)
+    obs_full = load_observations(kb_root)
 
     entity_uids = set(find_candidate_entities(entities_full, query)) if query else set()
     candidate_atoms = find_candidate_atoms(atoms_full, entity_uids, atom)

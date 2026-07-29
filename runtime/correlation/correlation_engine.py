@@ -38,7 +38,7 @@ from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # runtime/
-from common import find_repo_root, scan_layer, write_proposal  # noqa: E402
+from common import find_repo_root, load_entities, load_atoms, write_proposal  # noqa: E402
 from llm_client import call_llm  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "policy"))
 import policy_engine as pe  # noqa: E402
@@ -173,8 +173,8 @@ def compute_correlation(repo_root: Path, text_a: str, title_a: str,
     weights = ce_cfg.get("weights", {"entity_overlap": 0.3, "graph_distance": 0.5, "stance": 0.2})
     max_hops = ce_cfg.get("max_graph_hops", 5)
 
-    entities = {fm.get("uid"): fm for _, fm, _ in scan_layer(kb_root, "1_Entities") if fm.get("uid")}
-    atoms = scan_layer(kb_root, "2_Atoms")
+    entities = {fm.get("uid"): fm for _, fm, _ in load_entities(kb_root) if fm.get("uid")}
+    atoms = load_atoms(kb_root)
     adj = ge.build_adjacency(atoms)
 
     ents_a = find_entities_in_text(text_a, entities)

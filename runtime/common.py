@@ -74,6 +74,122 @@ def scan_layer(kb_root: Path, dirname: str) -> list[tuple[Path, dict, str]]:
     return results
 
 
+# ============================================================
+# 索引讀取（runtime/indexer/index_builder.py 產生的 .index/generated/*.tsv）
+# ============================================================
+#
+# scan_layer() 每次呼叫都會重新掃整個目錄、逐檔讀取 + 解析 YAML frontmatter——
+# 知識庫還小的時候沒差，但查詢路徑（adapter.py 每個 handler）幾乎都是每個 request
+# 呼叫好幾次 scan_layer()，知識庫大了之後這會變成每個 request 都重新解析整個
+# 知識庫。load_indexed_layer() 優先讀預先攤平好的 TSV 索引，只有在索引不存在、
+# 或明顯比來源目錄舊（代表沒有重建過，例如沒裝 pre-commit hook）時，才 fallback
+# 回 scan_layer() 全量重掃——寧可退回較慢但保證正確的路徑，也不要讓查詢在
+# 使用者沒發現的情況下靜默吃到舊資料。
+#
+# 已知限制：這個新鮮度判斷只用「來源目錄裡最新檔案的 mtime」跟「索引檔案的
+# mtime」比較，抓得到「新增/修改檔案後沒重建索引」，抓不到「刪除檔案後沒重建
+# 索引」（剩下的檔案 mtime 不會變新）。這個系統裡 Atom 不可變、Observation
+# 只增不刪，Entity 偶爾編輯但很少真的刪除，這個不對稱在目前的使用模式下風險
+# 很低；如果之後真的需要支援刪除即時反映，要換成雜湊比對或直接記錄檔案數量。
+#
+# TSV 是攤平過的 frontmatter 投影，不含 Markdown 全文——回傳的 body 一律是
+# None。極少數需要全文的呼叫端（例如 Entity 描述摘要）不該因為要顯示幾筆
+# 描述又把整層重掃一次，改成只對「這次真的要顯示的那幾筆」呼叫 parse_md()
+# 現讀單一檔案，見 integration/epistemic_adapter/adapter.py 的用法。
+def load_indexed_layer(kb_root: Path, dirname: str, index_filename: str,
+                        hydrate) -> list[tuple[Path, dict, None]]:
+    layer_dir = kb_root / dirname
+    index_path = kb_root / ".index" / "generated" / index_filename
+
+    if index_path.exists() and layer_dir.exists():
+        index_mtime = index_path.stat().st_mtime
+        newest_source_mtime = max((p.stat().st_mtime for p in layer_dir.glob("*.md")), default=0)
+        if index_mtime >= newest_source_mtime:
+            rows = read_tsv(index_path)
+            return [(layer_dir / f"{row.get('uid', '')}.md", hydrate(row), None) for row in rows]
+        print(f"[Index] {index_filename} 比 {dirname}/ 裡的檔案舊，可能是忘了跑 index_builder.py "
+              f"或沒裝 pre-commit hook，這次 fallback 回全量掃描以確保資料正確；建議重跑 "
+              f"`python3 runtime/indexer/index_builder.py`。", file=sys.stderr)
+
+    return scan_layer(kb_root, dirname)
+
+
+def _split_dim(raw: str) -> dict:
+    """把 index_builder.py 攤平成 'value|confidence' 的單一維度字串還原成
+    {"value":..., "confidence":...}，對應 observation frontmatter 的 context.<dim> 結構。"""
+    value, _, confidence = (raw or "").partition("|")
+    d: dict = {}
+    if value:
+        d["value"] = value
+    if confidence:
+        try:
+            d["confidence"] = float(confidence)
+        except ValueError:
+            pass
+    return d
+
+
+def hydrate_entity_row(row: dict) -> dict:
+    return {
+        "uid":     row.get("uid", ""),
+        "name":    row.get("name", ""),
+        "domains": [d for d in (row.get("domains") or "").split(",") if d],
+        "aliases": [a for a in (row.get("aliases") or "").split(",") if a],
+        "type":    row.get("type", ""),
+    }
+
+
+def hydrate_atom_row(row: dict) -> dict:
+    return {
+        "uid":         row.get("uid", ""),
+        "from":        row.get("from", ""),
+        "to":          row.get("to", ""),
+        "type":        row.get("type", ""),
+        "status":      row.get("status", ""),
+        "abstraction": {"level": row.get("abstraction_level", "")},
+        "lifecycle":   {"last_review": row.get("lifecycle_last_review", "")},
+    }
+
+
+def hydrate_observation_row(row: dict) -> dict:
+    confidence_value = row.get("confidence_value") or ""
+    confidence: dict = {}
+    if confidence_value:
+        try:
+            confidence["value"] = float(confidence_value)
+        except ValueError:
+            pass
+    return {
+        "uid":   row.get("uid", ""),
+        "atom":  row.get("atom_uid", ""),
+        "epoch": row.get("epoch", ""),
+        "context": {
+            "market_regime":   _split_dim(row.get("market_regime", "")),
+            "monetary_policy": _split_dim(row.get("monetary_policy", "")),
+            "liquidity":       _split_dim(row.get("liquidity", "")),
+            "inflation":       _split_dim(row.get("inflation", "")),
+            "geopolitical":    _split_dim(row.get("geopolitical", "")),
+        },
+        "impact":      row.get("impact", ""),
+        "probability": row.get("probability", ""),
+        "stance":      row.get("stance", ""),
+        "confidence":  confidence,
+        "evidence":    [e for e in (row.get("evidence") or "").split(";") if e],
+    }
+
+
+def load_entities(kb_root: Path) -> list[tuple[Path, dict, None]]:
+    return load_indexed_layer(kb_root, "1_Entities", "entities.tsv", hydrate_entity_row)
+
+
+def load_atoms(kb_root: Path) -> list[tuple[Path, dict, None]]:
+    return load_indexed_layer(kb_root, "2_Atoms", "atoms.tsv", hydrate_atom_row)
+
+
+def load_observations(kb_root: Path) -> list[tuple[Path, dict, None]]:
+    return load_indexed_layer(kb_root, "3_Observations", "observations.tsv", hydrate_observation_row)
+
+
 def months_between(d1: date, d2: date) -> float:
     """近似月數差（d2 - d1），允許非整月。"""
     return (d2.year - d1.year) * 12 + (d2.month - d1.month) + (d2.day - d1.day) / 30.0
