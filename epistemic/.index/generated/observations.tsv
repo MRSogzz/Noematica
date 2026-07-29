@@ -1,7 +1,13 @@
-uid	atom_uid	epoch	market_regime	monetary_policy	liquidity	inflation	geopolitical	impact	probability	stance	confidence_value
-2023Q1_rate_nim_obs	rate_affects_bank_nim	2023Q1	risk_off|0.6	tightening|0.9	tight|0.6	rising|0.7	stable|0.5	70	0.75	support	0.65
-2023Q2_rate_nim_obs	rate_affects_bank_nim	2023Q2	risk_off|0.5	tightening|0.85	tight|0.7	rising|0.6	stable|0.5	-30	0.55	contradict	0.5
-2023Q3_rate_nim_obs	rate_affects_bank_nim	2023Q3	risk_off|0.5	tightening|0.8	tight|0.75	stable|0.5	stable|0.5	-40	0.6	contradict	0.55
-2023Q4_rate_nim_obs	rate_affects_bank_nim	2023Q4	risk_on|0.5	tightening|0.7	ample|0.5	falling|0.5	stable|0.5	25	0.5	support	0.5
-2024Q2_rate_nim_obs	rate_affects_bank_nim	2024Q2	risk_on|0.5	neutral|0.6	ample|0.55	falling|0.6	stable|0.5	-20	0.5	contradict	0.45
-2024Q4_rate_nim_obs	rate_affects_bank_nim	2024Q4	risk_on|0.5	easing|0.7	ample|0.6	falling|0.6	stable|0.5	-35	0.55	contradict	0.5
+uid	atom_uid	epoch	market_regime	monetary_policy	liquidity	inflation	geopolitical	impact	probability	stance	confidence_value	evidence
+2023Q1_rate_nim_obs	rate_affects_bank_nim	2023Q1	risk_off|0.6	tightening|0.9	tight|0.6	rising|0.7	stable|0.5	70	0.75	support	0.65	[[4_Sources/fed_2023_h1_report.md]]
+2023Q2_rate_nim_obs	rate_affects_bank_nim	2023Q2	risk_off|0.5	tightening|0.85	tight|0.7	rising|0.6	stable|0.5	-30	0.55	contradict	0.5	[[4_Sources/bank_earnings_calls_2023_2024.md]]
+2023Q3_rate_nim_obs	rate_affects_bank_nim	2023Q3	risk_off|0.5	tightening|0.8	tight|0.75	stable|0.5	stable|0.5	-40	0.6	contradict	0.55	[[4_Sources/bank_earnings_calls_2023_2024.md]]
+2023Q4_rate_nim_obs	rate_affects_bank_nim	2023Q4	risk_on|0.5	tightening|0.7	ample|0.5	falling|0.5	stable|0.5	25	0.5	support	0.5	[[4_Sources/fed_2023_h1_report.md]]
+2024Q2_rate_nim_obs	rate_affects_bank_nim	2024Q2	risk_on|0.5	neutral|0.6	ample|0.55	falling|0.6	stable|0.5	-20	0.5	contradict	0.45	[[4_Sources/bank_earnings_calls_2023_2024.md]]
+2024Q4_rate_nim_obs	rate_affects_bank_nim	2024Q4	risk_on|0.5	easing|0.7	ample|0.6	falling|0.6	stable|0.5	-35	0.55	contradict	0.5	[[4_Sources/bank_earnings_calls_2023_2024.md]]
+2026_07_18_dropout_causal_overfitting_obs_88ca9b9d	dropout_causal_overfitting	2026-07-18	|0.0	|0.0	|0.0	|0.0	|0.0	85	0.85	support	0.85	[[4_Sources/NOTE_C345C075C5.md]]
+2026_07_18_large_ai_model_causal_gradien_obs_73f1e7cf	large_ai_model_causal_gradient_propagation	2026-07-18	|0.0	|0.0	|0.0	|0.0	|0.0	85	0.95	support	0.95	[[4_Sources/NOTE_C345C075C5.md]]
+2026_07_18_large_ai_model_causal_overfit_obs_11b7b900	large_ai_model_causal_overfitting	2026-07-18	|0.0	|0.0	|0.0	|0.0	|0.0	75	0.9	support	0.9	[[4_Sources/NOTE_C345C075C5.md]]
+2026_07_18_large_ai_model_causal_trainin_obs_6e4a1e66	large_ai_model_causal_training_stability	2026-07-18	|0.0	|0.0	|0.0	|0.0	|0.0	70	0.9	support	0.9	[[4_Sources/NOTE_C345C075C5.md]]
+2026_07_18_normalization_causal_training_obs_143b4554	normalization_causal_training_stability	2026-07-18	|0.0	|0.0	|0.0	|0.0	|0.0	80	0.85	support	0.8	[[4_Sources/NOTE_C345C075C5.md]]
+2026_07_18_residual_connection_causal_gr_obs_efd1c748	residual_connection_causal_gradient_propagation	2026-07-18	|0.0	|0.0	|0.0	|0.0	|0.0	90	0.95	support	0.9	[[4_Sources/NOTE_C345C075C5.md]]

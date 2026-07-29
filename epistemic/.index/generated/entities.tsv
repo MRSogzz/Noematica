@@ -1,7 +1,16 @@
 uid	name	domains	aliases	type
+backpropagation	反向傳播	Training	Backpropagation	Optimization_Algorithm
 bank_net_interest_margin	銀行淨利差	macro,finance	NIM,銀行獲利,淨息差	macro_variable
+dropout	丟棄法	Deep Learning,Regularization	隨機停用神經元	Technique
 fed_funds_rate	聯邦基金利率	macro,finance	FFR,美國基準利率,聯準會利率	macro_variable
+generalization_ability	泛化能力	Model Performance	過擬合的對立面	Metric
+gradient_propagation	梯度傳遞	Optimization,Backpropagation	梯度消失	Process
+large_ai_model	大型人工智慧模型	Artificial Intelligence,Deep Learning	AI Model	Concept
+normalization	正規化	Deep Learning,Optimization	Batch Normalization,批次正規化	Technique
+overfitting	過擬合	Model Performance	資料過擬合	Problem
 positional_encoding_mechanism	位置編碼機制	nlp,deep_learning	位置編碼,Positional Encoding,位置向量,Positional Embedding	concept
+residual_connection	殘差連接	Deep Learning,Architecture	Skip Connection,捷徑連接	Technique
+training_stability	訓練穩定性	Model Performance	訓練過程中的不穩定性	Metric
 transformer_architecture	Transformer 架構	nlp,deep_learning	Transformer,自注意力架構	concept
 tsmc	台積電	semiconductor,taiwan_equity	TSMC,台灣積體電路,2330	company
 word2vec	Word2Vec	nlp,deep_learning		concept

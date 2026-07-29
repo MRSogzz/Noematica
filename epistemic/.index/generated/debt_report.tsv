@@ -1,3 +1,6 @@
 atom_uid	last_support_epoch	age_months	risk	reason
-rate_affects_bank_nim	2023-10-01	33.8	medium	last_support_older_than_threshold
+backpropagation_causal_gradient_descent			high	no_support_observation_found
+cross_entropy_loss_causal_training_phase			high	no_support_observation_found
+prediction_error_causal_training_phase			high	no_support_observation_found
+rate_affects_bank_nim	2023-10-01	33.9	medium	last_support_older_than_threshold
 word2vec_causal_transformer			high	no_support_observation_found
