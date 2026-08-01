@@ -5,15 +5,23 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>F3 測試套件 — 測試面板</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <script src="theme-boot.js"></script>
   <style>
     :root {
-      --bg:      #18181c;
-      --bg2:     #222228;
+      /* --bg/--bg2/--bg3/--card-bg 在這份檔案裡跟共用主題變數不同名，
+         用 var(--共用變數名, 原本字面值) 接手，安全、不會循環參照；
+         --border/--text/--muted/--accent 剛好跟共用變數同名，保留原本字面值
+         當預設值就好，theme-boot.js 用 inline style 設值時會自動蓋過去。 */
+      --bg:      var(--panel-bg, #18181c);
+      --bg2:     var(--key-bg, #222228);
       --bg3:     #2a2a32;
-      --card-bg: #1e1e24;
+      --card-bg: var(--panel-bg, #1e1e24);
       --border:  rgba(255,255,255,0.1);
       --text:    #e8e4de;
       --muted:   rgba(232,228,222,0.4);
+      /* 測試結果狀態色（通過/失敗/略過/待處理）跟測試分類色（單元/整合/端對端），
+         刻意不跟主題走——理由跟 Orbit 面板的 Strong/Medium/Weak 一樣：
+         這些顏色本身帶有語意，換主題不該連著換掉「綠=通過、紅=失敗」的直覺。 */
       --pass:    #4ade80;
       --fail:    #f87171;
       --skip:    #94a3b8;
@@ -47,7 +55,7 @@
     }
     .header-logo {
       width: 36px; height: 36px; border-radius: 50%;
-      background: linear-gradient(135deg, #ec4899, #8b5cf6);
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
       display: flex; align-items: center; justify-content: center;
       font-size: 16px;
     }
@@ -69,7 +77,7 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 11px; font-weight: 700;
       padding: 6px 16px; border-radius: 20px;
-      background: linear-gradient(135deg, #ec4899, #8b5cf6);
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
       border: none; color: white; cursor: pointer;
       transition: opacity .12s;
     }
@@ -91,7 +99,7 @@
     .tab.t-unit   { --tc: var(--unit-c); }
     .tab.t-int    { --tc: var(--int-c);  }
     .tab.t-e2e    { --tc: var(--e2e-c);  }
-    .tab.t-all    { --tc: #e8e4de;       }
+    .tab.t-all    { --tc: var(--text);       }
     .tab.active   { color: var(--tc, var(--text)); }
     .tab-count { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; font-size: 9px; margin-left: 6px; background: rgba(255,255,255,0.1); }
 
@@ -246,7 +254,7 @@
       transition: opacity .12s;
     }
     .detail-act-btn:hover { opacity: .85; }
-    .btn-run  { background: linear-gradient(135deg,#ec4899,#8b5cf6); color: #fff; }
+    .btn-run  { background: linear-gradient(135deg,var(--accent),#8b5cf6); color: #fff; }
     .btn-copy { background: rgba(255,255,255,0.1); color: var(--text); border: 1px solid var(--border); }
 
     /* right: tab+content */

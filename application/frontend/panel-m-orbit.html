@@ -3,17 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <title>M · 認知地圖 — Activation Orbit</title>
+<script src="theme-boot.js"></script>
 <style>
     :root {
-        --bg: #0a091b;
-        --panel: #14132b;
-        --panel-2: #191830;
+        /* 命名法：跟 theme-boot.js 設的共用變數「同名」的（--accent/--text/--border/
+           --accent2），保留原本寫死的字面值當預設值就好，不要包一層 var(--同名,...)——
+           那樣會變成 CSS 的循環參照，規範上整個屬性直接判定無效，不會乖乖退回
+           fallback。theme-boot.js 用 inline style 設值時，本來就會自動蓋掉這裡的
+           字面值（inline style 優先權天生比 stylesheet 規則高），不需要額外接管。
+           跟共用變數「不同名」的（--bg/--panel/--panel-2/--text-dim），才需要用
+           var(--共用變數名, 原本的字面值) 明確接手。 */
+        --bg: var(--panel-bg, #0a091b);
+        --panel: var(--panel-bg, #14132b);
+        --panel-2: var(--key-bg, #191830);
         --border: rgba(255,255,255,0.08);
         --text: #e5e0ff;
-        --text-dim: rgba(255,255,255,0.45);
+        --text-dim: var(--muted, rgba(255,255,255,0.45));
         --text-faint: rgba(255,255,255,0.25);
         --accent: #a78bfa;
-        --accent-2: #f472b6;
+        --accent2: #f472b6;
+        /* Strong/Medium/Weak/Hidden 是 Activation Queue 的信心分級語意色，
+           刻意不跟主題走——換主題不該把「綠=強／紅=危險」這種使用者已經
+           建立的視覺記憶打亂，見與使用者的討論結論。 */
         --strong: #4ade80;
         --medium: #fbbf24;
         --weak: #60a5fa;
@@ -124,7 +135,7 @@
     }
     .orbit-node:hover { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(167,139,250,0.15); }
     .orbit-node.is-focus {
-        border-color: var(--accent-2); background: rgba(244,114,182,0.12);
+        border-color: var(--accent2); background: rgba(244,114,182,0.12);
         box-shadow: 0 0 0 4px rgba(244,114,182,0.15); font-weight: 600;
     }
     .orbit-node .on-name { color: var(--text); }
@@ -187,14 +198,14 @@
     .modal-overlay.active { display: flex; }
     .modal-box {
         width: min(560px, 90vw); max-height: 85vh; overflow-y: auto;
-        background: #14132b; border: 1px solid rgba(167,139,250,0.25); border-radius: 14px;
+        background: var(--panel); border: 1px solid rgba(167,139,250,0.25); border-radius: 14px;
         padding: 24px; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
     }
     #review-modal .modal-box { width: min(680px, 92vw); }
-    .modal-box h2 { font-size: 16px; margin-bottom: 8px; color: #e5e0ff; }
+    .modal-box h2 { font-size: 16px; margin-bottom: 8px; color: var(--text); }
     .modal-hint { font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.7; margin-bottom: 18px; }
     .modal-hint code { background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px; }
-    .modal-hint b { color: #fbbf24; }
+    .modal-hint b { color: var(--medium); }
     .modal-close {
         position: absolute; top: 14px; right: 14px; background: none; border: none;
         color: rgba(255,255,255,0.4); font-size: 18px; cursor: pointer;
@@ -203,7 +214,7 @@
     .modal-field label { display: block; font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 5px; letter-spacing: .5px; }
     .modal-field select, .modal-field input, .modal-field textarea {
         width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 8px; padding: 9px 12px; color: #e5e0ff; font-family: inherit;
+        border-radius: 8px; padding: 9px 12px; color: var(--text); font-family: inherit;
         font-size: 13px; resize: vertical; box-sizing: border-box;
     }
     .modal-field select:focus, .modal-field input:focus, .modal-field textarea:focus {
@@ -213,17 +224,17 @@
         font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 16px;
         padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 8px;
     }
-    .modal-provider-info b { color: #a78bfa; }
+    .modal-provider-info b { color: var(--accent); }
     .modal-submit {
         width: 100%; padding: 11px; border-radius: 8px; border: none;
-        background: linear-gradient(135deg, #a78bfa, #f472b6); color: #14132b;
+        background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--panel);
         font-weight: 600; font-size: 13px; cursor: pointer;
     }
     .modal-submit:disabled { opacity: 0.5; cursor: not-allowed; }
     #extract-result, #review-compile-result { margin-top: 16px; font-size: 12px; }
-    .er-ok   { color: #4ade80; margin-bottom: 6px; }
-    .er-warn { color: #fbbf24; margin-bottom: 4px; }
-    .er-err  { color: #f87171; }
+    .er-ok   { color: var(--strong); margin-bottom: 6px; }
+    .er-warn { color: var(--medium); margin-bottom: 4px; }
+    .er-err  { color: var(--danger); }
     .er-info { color: rgba(255,255,255,0.4); margin-top: 8px; line-height: 1.6; }
 
     #review-empty { font-size: 12px; color: rgba(255,255,255,0.3); padding: 20px 0; text-align: center; }
@@ -237,20 +248,20 @@
         font-size: 10px; padding: 2px 8px; border-radius: 10px; text-transform: uppercase;
         letter-spacing: .5px; font-weight: 600;
     }
-    .review-type-badge.type-entity      { background: rgba(96,165,250,0.15); color: #60a5fa; }
-    .review-type-badge.type-atom        { background: rgba(167,139,250,0.15); color: #a78bfa; }
-    .review-type-badge.type-observation { background: rgba(251,191,36,0.15); color: #fbbf24; }
-    .review-type-badge.type-source      { background: rgba(244,114,182,0.15); color: #f472b6; }
-    .review-item-summary { font-size: 13px; color: #e5e0ff; flex: 1; }
+    .review-type-badge.type-entity      { background: rgba(96,165,250,0.15); color: var(--weak); }
+    .review-type-badge.type-atom        { background: rgba(167,139,250,0.15); color: var(--accent); }
+    .review-type-badge.type-observation { background: rgba(251,191,36,0.15); color: var(--medium); }
+    .review-type-badge.type-source      { background: rgba(244,114,182,0.15); color: var(--accent2); }
+    .review-item-summary { font-size: 13px; color: var(--text); flex: 1; }
     .review-item-status { font-size: 11px; color: rgba(255,255,255,0.35); }
-    .review-item-status.approved { color: #4ade80; }
+    .review-item-status.approved { color: var(--strong); }
     .review-item-actions { display: flex; gap: 8px; margin-top: 8px; }
     .review-item-actions button {
         font-size: 11px; padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
         background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.7); cursor: pointer; font-family: inherit;
     }
-    .review-item-actions button.btn-approve:hover { border-color: #4ade80; color: #4ade80; }
-    .review-item-actions button.btn-reject:hover  { border-color: #f87171; color: #f87171; }
+    .review-item-actions button.btn-approve:hover { border-color: var(--strong); color: var(--strong); }
+    .review-item-actions button.btn-reject:hover  { border-color: var(--danger); color: var(--danger); }
     .review-item-detail {
         display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.08);
         font-size: 11px; color: rgba(255,255,255,0.5); white-space: pre-wrap; max-height: 200px; overflow-y: auto;

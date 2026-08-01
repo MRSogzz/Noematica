@@ -21,6 +21,7 @@ body 是 jsonschema 的錯誤訊息，不是靜默吞掉或回假資料。
 這兩個 process 假設是在同一台機器上，不是要對外網開放的公開 API）。
 """
 from __future__ import annotations
+import logging
 import sys
 from pathlib import Path
 
@@ -31,6 +32,20 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import jsonschema
 import uvicorn
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logger = logging.getLogger("epistemic_adapter")
+
+
+def _internal_error(e: Exception) -> HTTPException:
+    """任何沒被前面更精確的 except（ValueError/FileNotFoundError 等）攔到的例外，
+    最後都會落到這裡——這是刻意的最外層防線，目的是讓 API process 不會因為
+    一個沒預期到的例外就整個掛掉，一律轉成 500 回給 client。但吞掉例外之前
+    一定要在伺服器端留下完整紀錄（含 traceback），不然出事後從 client 收到
+    的 500 完全查不出原因——原本這裡只把例外訊息塞進 HTTP response，
+    伺服器自己的 log 是空的，這是唯一一處真的該修的問題。"""
+    logger.exception("未預期的例外：%s", e)
+    return HTTPException(status_code=500, detail=str(e))
 
 app = FastAPI(title="Epistemic Adapter", version="1.0.0")
 
@@ -56,7 +71,7 @@ def query(payload: dict):
     except jsonschema.ValidationError as e:
         raise HTTPException(status_code=422, detail=f"Query Contract 驗證失敗: {e.message}")
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _internal_error(e)
 
 
 @app.post("/feedback")
@@ -66,7 +81,7 @@ def feedback(payload: dict):
     except jsonschema.ValidationError as e:
         raise HTTPException(status_code=422, detail=f"Feedback Contract 驗證失敗: {e.message}")
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _internal_error(e)
 
 
 @app.get("/graph")
@@ -75,7 +90,7 @@ def graph():
     try:
         return adapter.handle_graph()
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _internal_error(e)
 
 
 @app.post("/extract")
@@ -89,7 +104,7 @@ def extract(payload: dict):
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _internal_error(e)
 
 
 @app.post("/correlate")
@@ -102,7 +117,7 @@ def correlate(payload: dict):
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _internal_error(e)
 
 
 @app.get("/inbox")
@@ -111,7 +126,7 @@ def list_inbox():
     try:
         return {"drafts": adapter.handle_list_inbox()}
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _internal_error(e)
 
 
 @app.get("/inbox/{filename}")
@@ -124,7 +139,7 @@ def get_inbox_draft(filename: str):
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _internal_error(e)
 
 
 @app.post("/inbox/{filename}/approve")
@@ -136,7 +151,7 @@ def approve_inbox_draft(filename: str):
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _internal_error(e)
 
 
 @app.post("/inbox/{filename}/reject")
@@ -149,7 +164,7 @@ def reject_inbox_draft(filename: str, payload: dict | None = None):
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _internal_error(e)
 
 
 @app.post("/compile")
@@ -158,7 +173,7 @@ def compile_drafts():
     try:
         return adapter.handle_compile()
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _internal_error(e)
 
 
 @app.get("/domains")
@@ -167,7 +182,7 @@ def list_domains():
     try:
         return adapter.handle_list_domains()
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _internal_error(e)
 
 
 @app.get("/search")
@@ -175,7 +190,7 @@ def search(q: str = "", domain: str = "", type: str = "", stale_only: bool = Fal
     try:
         return adapter.handle_search(q=q, domain=domain, type_filter=type, stale_only=stale_only)
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _internal_error(e)
 
 
 @app.get("/orbit/{uid}")
@@ -186,7 +201,7 @@ def orbit(uid: str, max_layer: int | None = None):
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _internal_error(e)
 
 
 @app.get("/explain/{uid}")
@@ -197,7 +212,7 @@ def explain(uid: str):
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _internal_error(e)
 
 
 @app.get("/reasoning-path")
@@ -209,7 +224,7 @@ def reasoning_path(from_: str = Query(..., alias="from"), to: str = Query(...)):
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _internal_error(e)
 
 
 @app.get("/timeline/{uid}")
@@ -220,7 +235,7 @@ def timeline(uid: str):
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _internal_error(e)
 
 
 @app.get("/governance-summary")
@@ -229,7 +244,7 @@ def governance_summary():
     try:
         return adapter.handle_governance_summary()
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _internal_error(e)
 
 
 if __name__ == "__main__":

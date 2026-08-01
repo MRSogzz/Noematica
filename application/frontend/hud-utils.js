@@ -54,8 +54,10 @@ function upTheme(e) {
 
 function applyTheme(t) {
   const root = document.documentElement, c = t.colors||{};
-  const map = {'--accent':c.accent,'--accent2':c.accent2,'--text':c.text,'--muted':c.muted,'--border':c.border,'--border2':c.border2,'--panel-bg':c.panelBg,'--key-bg':c.keyBg,'--quest-bg':c.questBg,'--bg-blur':c.bgBlur,'--hp-l':c.hpColor,'--hp-r':c.hpColor2};
+  const map = {'--accent':c.accent,'--accent2':c.accent2,'--text':c.text,'--muted':c.muted,'--border':c.border,'--border2':c.border2,'--panel-bg':c.panelBg,'--key-bg':c.keyBg,'--quest-bg':c.questBg,'--overlay-color':c.overlayColor,'--bg-blur':c.bgBlur,'--hp-l':c.hpColor,'--hp-r':c.hpColor2};
   Object.entries(map).forEach(([k,v])=>{ if(v) root.style.setProperty(k,v); });
+  const l = t.layout||{};
+  if(l.keyBtnSize) root.style.setProperty('--key-size', l.keyBtnSize+'px');
   const a = t.assets||{};
   if(a.bg){document.getElementById('hud-bg').style.backgroundImage=`url(${a.bg})`;document.getElementById('hud-bg').style.backgroundSize='cover';}
   if(a.minimap){const img=document.getElementById('mm-img'),svg=document.getElementById('mm-svg');img.src=a.minimap;img.onload=()=>{img.classList.add('on');if(svg)svg.style.display='none';};}
@@ -63,15 +65,26 @@ function applyTheme(t) {
   if(a.avatars)Object.entries(a.avatars).forEach(([i,s])=>{const img=document.getElementById('avi-'+i);if(img&&s){img.src=s;img.onload=()=>img.classList.add('on');}});
 }
 
-async function loadThemeFromServer(id) {
-  try { const t=await(await fetch(`assets/themes/${id}/theme.json`)).json(); applyTheme(t); toast('主題已載入：'+(t.name||id)); } catch(e){ toast('主題載入失敗'); }
+async function loadThemeFromServer(id, opts) {
+  const silent = opts && opts.silent;
+  try {
+    const t = await (await fetch(`assets/themes/${id}/theme.json`)).json();
+    applyTheme(t);
+    if (!silent) toast('主題已載入：'+(t.name||id));
+  } catch(e) {
+    // 開機自動載入時（silent=true）不用跳錯誤 toast 打擾使用者——
+    // 沒有 theme.json 就留著目前的 SVG demo 圖案，是合理的降級行為，
+    // 不是需要使用者處理的錯誤；手動從設定面板選主題失敗時才需要提示。
+    if (!silent) toast('主題載入失敗');
+    else console.warn('[Theme] 開機自動載入主題失敗，沿用預設 SVG 圖示：', e);
+  }
 }
 
 function clearAll() {
   document.getElementById('hud-bg').style.backgroundImage='';
   const mi=document.getElementById('mm-img'),ms=document.getElementById('mm-svg');
   mi.src='';mi.classList.remove('on');if(ms)ms.style.display='';
-  ['f1','f2','f3','f4','f5','b','h','m'].forEach(k=>{const i=document.getElementById('hki-'+k);if(i){i.src='';i.classList.remove('on');}});
+  ['f1','f2','f3','f4','f5','b','h','m','esc'].forEach(k=>{const i=document.getElementById('hki-'+k);if(i){i.src='';i.classList.remove('on');}});
   [0,1,2].forEach(n=>{const i=document.getElementById('avi-'+n);if(i){i.src='';i.classList.remove('on');}});
   objectUrls.forEach(URL.revokeObjectURL);objectUrls=[];
   toast('已清除所有自訂資源');

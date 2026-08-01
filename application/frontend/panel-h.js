@@ -43,7 +43,7 @@ PANELS.h = async function h() {
         .wiki-ai-msg.user {
           align-self: flex-end;
           background: rgba(78,205,196,0.12); border: 1px solid rgba(78,205,196,0.3);
-          color: #e0ecff;
+          color: var(--text);
         }
         .wiki-ai-msg.ai {
           align-self: flex-start;
@@ -90,7 +90,7 @@ PANELS.h = async function h() {
           flex: 1; background: rgba(0,0,0,0.4);
           border: 1px solid rgba(78,205,196,0.25); border-radius: 8px;
           padding: 8px 12px; font-family: 'JetBrains Mono', monospace;
-          font-size: 11px; color: #f0ead8; outline: none; resize: none;
+          font-size: 11px; color: var(--text); outline: none; resize: none;
           min-height: 36px; max-height: 100px; line-height: 1.5;
           transition: border-color .12s;
         }
@@ -114,7 +114,7 @@ PANELS.h = async function h() {
         .wiki-doc-item.active { background: rgba(78,205,196,0.1); border-left: 2px solid #4ECDC4; padding-left: 12px; }
         .wiki-doc-icon { font-size: 16px; flex-shrink: 0; }
         .wiki-doc-info { flex: 1; min-width: 0; }
-        .wiki-doc-name { font-size: 12px; color: #f0ead8; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .wiki-doc-name { font-size: 12px; color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .wiki-doc-path { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 1px; }
         .wiki-empty-ai {
           display: flex; flex-direction: column; align-items: center; justify-content: center;

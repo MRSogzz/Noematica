@@ -19,15 +19,18 @@
     "hpColor2":     "#8BC34A"
   },
   "assets": {
-    "bg":           "assets/themes/default/bg/bg.jpg",
+    "bg":           "assets/themes/default/bg/bg.png",
     "minimap":      "assets/themes/default/minimap/minimap.png",
     "keys": {
       "f1":         "assets/themes/default/keys/key-f1.png",
       "f2":         "assets/themes/default/keys/key-f2.png",
       "f3":         "assets/themes/default/keys/key-f3.png",
       "f4":         "assets/themes/default/keys/key-f4.png",
+	  "f5":         "assets/themes/default/keys/key-f5.png",
       "b":          "assets/themes/default/keys/key-b.png",
-      "m":          "assets/themes/default/keys/key-m.png"
+	  "h":          "assets/themes/default/keys/key-h.png",
+      "m":          "assets/themes/default/keys/key-m.png",
+	  "esc":        "assets/themes/default/keys/key-esc.png"
     },
     "avatars": {
       "0":          "assets/themes/default/avatars/avatar-0.png",

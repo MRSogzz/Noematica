@@ -65,7 +65,7 @@ const PANELS = {
         wrap.style.cssText = 'height:100%;display:flex;flex-direction:column;padding:14px;gap:8px';
         const ta = document.createElement('textarea');
         ta.id = 'f1-editor';
-        ta.style.cssText = 'flex:1;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:16px;font-family:"JetBrains Mono",monospace;font-size:13px;color:#f0ead8;resize:none;outline:none;line-height:1.8';
+        ta.style.cssText = 'flex:1;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:16px;font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--text);resize:none;outline:none;line-height:1.8';
         ta.value = d.content;
         ta.addEventListener('keydown', e => {
           if (e.ctrlKey && e.key === 's') { e.preventDefault(); f1Save(); }
@@ -138,7 +138,7 @@ const PANELS = {
           actions:[{ label:'儲存', cls:'primary', onclick:'f1Save()' }]
         });
         renderGrid(`<div style="height:100%;display:flex;flex-direction:column;padding:14px;gap:8px">
-          <textarea id="f1-editor" style="flex:1;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#f0ead8;resize:none;outline:none;line-height:1.8"
+          <textarea id="f1-editor" style="flex:1;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);resize:none;outline:none;line-height:1.8"
             onkeydown="if(event.ctrlKey&&event.key==='s'){event.preventDefault();f1Save();}"
             placeholder="# 新筆記標題\n\n開始撰寫…"></textarea>
         </div>`);
@@ -205,7 +205,7 @@ const PANELS = {
           <div class="m-item" style="aspect-ratio:unset;flex-direction:row;align-items:center;gap:12px;padding:12px 16px;border-radius:8px;height:auto" onclick="f2Show(${i})">
             <div style="width:8px;height:8px;border-radius:50%;background:#4fc3f7;flex-shrink:0"></div>
             <div style="flex:1;min-width:0">
-              <div style="font-size:12px;color:#f0ead8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.message}</div>
+              <div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.message}</div>
               <div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:2px">${c.author} · ${new Date(c.date).toLocaleString('zh-TW')}</div>
             </div>
             <code style="font-size:10px;color:#4fc3f7;flex-shrink:0">${c.hash}</code>
@@ -238,7 +238,7 @@ const PANELS = {
             <div style="font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:.1em;text-transform:uppercase;padding:4px 0">已修改 (${modified.length})</div>
             ${modified.map(f=>`<div class="m-item" style="aspect-ratio:unset;flex-direction:row;padding:10px 14px;height:auto;gap:10px;border-radius:6px">
               <span style="font-size:14px">✏️</span>
-              <span style="font-size:11px;color:#f0ead8">${f}</span>
+              <span style="font-size:11px;color:var(--text)">${f}</span>
             </div>`).join('')}
             ${staged.length ? `<div style="font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:.1em;text-transform:uppercase;padding:8px 0 4px">已暫存 (${staged.length})</div>
             ${staged.map(f=>`<div class="m-item" style="aspect-ratio:unset;flex-direction:row;padding:10px 14px;height:auto;gap:10px;border-radius:6px">
@@ -299,7 +299,7 @@ const PANELS = {
         return `<div class="m-item" onclick="window._f4Show(${idx})"
                      style="padding:12px 10px;aspect-ratio:unset;height:auto;gap:6px">
           <div style="font-size:24px">${pct===100?'🏆':pct>=60?'⚡':'📌'}</div>
-          <div class="m-item-name" style="font-size:11px;font-weight:700;color:#f0ead8">${m.title}</div>
+          <div class="m-item-name" style="font-size:11px;font-weight:700;color:var(--text)">${m.title}</div>
           <div style="width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden">
             <div style="width:${pct}%;height:100%;background:linear-gradient(to right,var(--accent),var(--accent2));border-radius:2px"></div>
           </div>
@@ -395,7 +395,7 @@ const PANELS = {
           <span style="color:${ti}">${m.input?.type  || '?'}</span>
           <span style="color:${to}">${m.output?.type || '?'}</span>
         </div>
-        <div class="m-item-name" style="font-size:11px;font-weight:700;color:#f0ead8;
+        <div class="m-item-name" style="font-size:11px;font-weight:700;color:var(--text);
              text-align:center;padding:2px 0">${m.name}</div>
         <div style="display:flex;justify-content:space-between;width:100%;font-size:9px">
           <span style="color:rgba(255,255,255,0.3)">#${String(m.id).padStart(2,'0')}</span>
@@ -427,12 +427,12 @@ const PANELS = {
 
       return `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px">
         ${steps}${status}
-        <button class="m-action-btn secondary"
+        <button class="m-action-btn secondary b-btn-validate"
           style="margin-left:8px;padding:3px 8px;font-size:9px;flex:none"
-          onclick="window._bValidate()">校驗</button>
-        <button class="m-action-btn secondary"
+          title="校驗" onclick="window._bValidate()">校驗</button>
+        <button class="m-action-btn secondary b-btn-clear"
           style="padding:3px 8px;font-size:9px;flex:none"
-          onclick="window._bClear()">清除</button>
+          title="清除" onclick="window._bClear()">清除</button>
       </div>`;
     }
 
@@ -581,14 +581,14 @@ const PANELS = {
               <div style="font-size:9px;font-weight:700;color:${ti};letter-spacing:.1em;
                           margin-bottom:4px;font-family:'JetBrains Mono',monospace">INPUT SCHEMA</div>
               <pre style="background:rgba(0,0,0,0.3);border:1px solid ${ti}33;border-radius:5px;
-                          padding:8px;font-size:10px;color:#f0ead8cc;line-height:1.6;
+                          padding:8px;font-size:10px;color:var(--text)cc;line-height:1.6;
                           white-space:pre-wrap;word-break:break-all;margin:0">${inputSchema.replace(/</g,'&lt;')}</pre>
             </div>
             <div>
               <div style="font-size:9px;font-weight:700;color:${to};letter-spacing:.1em;
                           margin-bottom:4px;font-family:'JetBrains Mono',monospace">OUTPUT SCHEMA</div>
               <pre style="background:rgba(0,0,0,0.3);border:1px solid ${to}33;border-radius:5px;
-                          padding:8px;font-size:10px;color:#f0ead8cc;line-height:1.6;
+                          padding:8px;font-size:10px;color:var(--text)cc;line-height:1.6;
                           white-space:pre-wrap;word-break:break-all;margin:0">${outputSchema.replace(/</g,'&lt;')}</pre>
             </div>
           </div>`;
@@ -671,7 +671,7 @@ const PANELS = {
             <div class="m-item" onclick="f5Open(${i},'all')" style="aspect-ratio:unset;flex-direction:row;align-items:center;gap:12px;padding:12px 16px;height:auto;border-radius:8px">
               <span style="font-size:20px">📄</span>
               <div style="flex:1;min-width:0">
-                <div style="font-size:13px;font-weight:700;color:#f0ead8">${d.name.replace('.md','')}</div>
+                <div style="font-size:13px;font-weight:700;color:var(--text)">${d.name.replace('.md','')}</div>
                 <div style="font-size:10px;color:rgba(255,255,255,0.3)">${d.path}</div>
               </div>
             </div>`).join('')}</div>`);
@@ -704,7 +704,7 @@ const PANELS = {
           <div class="m-item" onclick="f5Open(${i})" style="aspect-ratio:unset;flex-direction:row;align-items:flex-start;gap:12px;padding:14px 16px;height:auto;border-radius:8px">
             <span style="font-size:22px;flex-shrink:0">📄</span>
             <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:700;color:#f0ead8">${r.title}</div>
+              <div style="font-size:13px;font-weight:700;color:var(--text)">${r.title}</div>
               <div style="font-size:10px;color:rgba(255,255,255,0.3);margin:2px 0">${r.path}</div>
               <div style="font-size:11px;color:rgba(240,234,216,0.5)">${r.excerpt}</div>
               <div style="margin-top:5px">${r.tags.map(t=>`<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(232,200,115,0.1);color:var(--accent);border:1px solid rgba(232,200,115,0.2);margin-right:4px">${t}</span>`).join('')}</div>

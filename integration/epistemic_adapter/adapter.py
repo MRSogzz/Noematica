@@ -27,14 +27,9 @@ import jsonschema
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONTRACTS_DIR = REPO_ROOT / "integration" / "contracts"
 
-sys.path.insert(0, str(REPO_ROOT / "runtime"))
-sys.path.insert(0, str(REPO_ROOT / "runtime" / "reasoning"))
-sys.path.insert(0, str(REPO_ROOT / "runtime" / "activation"))
-sys.path.insert(0, str(REPO_ROOT / "runtime" / "policy"))
-sys.path.insert(0, str(REPO_ROOT / "runtime" / "extraction"))
-sys.path.insert(0, str(REPO_ROOT / "runtime" / "correlation"))
-sys.path.insert(0, str(REPO_ROOT / "runtime" / "compiler"))
-sys.path.insert(0, str(REPO_ROOT / "runtime" / "graph"))
+for _subdir in ("runtime", "runtime/reasoning", "runtime/activation", "runtime/policy",
+                "runtime/extraction", "runtime/correlation", "runtime/compiler", "runtime/graph"):
+    sys.path.insert(0, str(REPO_ROOT / _subdir))
 import reasoning_engine as re_  # noqa: E402
 import policy_engine as pe  # noqa: E402
 import note_extractor as ne  # noqa: E402

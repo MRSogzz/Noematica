@@ -353,4 +353,9 @@ async function testConnection() {
 })();
 
 loadQuests();
-// loadThemeFromServer('default');   // 取消注解以自動載入主題
+// 開機自動套用風格檔案（assets/themes/<id>/theme.json），取代原本一開始只有
+// 寫死的 SVG demo 圖案、要手動上傳 theme.json 才會換掉的行為。想換成別的主題，
+// 把 'default' 換成 assets/themes/ 底下其他資料夾名稱即可（目前有 cyber、gamification）；
+// silent:true 是因為這是開機自動觸發，theme.json 萬一還沒準備好不該跳錯誤 toast 打擾使用者，
+// 手動從設定面板上傳 theme.json（upTheme()）失敗時才需要提示。
+loadThemeFromServer('default', {silent: true});

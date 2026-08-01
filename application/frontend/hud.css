@@ -11,6 +11,10 @@
       --bg-blur:  4px;
       --hp-l:     #4CAF50;
       --hp-r:     #8BC34A;
+      --overlay-color: rgba(0,0,0,0.82);
+      --key-size: 46px;   /* 所有 hotkey 圓形按鈕（F1-F5/B/H/M/ESC）共用同一個尺寸變數，
+                              不要在個別按鈕上另外寫死 width/height——ESC 之前比其他按鈕
+                              小一圈，就是因為它自己蓋了一份 40px，沒有跟著這個變數走。 */
       --api:      http://localhost:3001;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -67,7 +71,7 @@
     .hk:hover { transform: scale(1.1); }
     .hk.active .hk-ico { outline: 2.5px solid rgba(255,255,255,0.9); outline-offset: 2px; }
     .hk-ico {
-      width: 46px; height: 46px; border-radius: 50%;
+      width: var(--key-size); height: var(--key-size); border-radius: 50%;
       border: 1.5px solid rgba(255,255,255,0.32); background: var(--key-bg);
       backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
       display: flex; align-items: center; justify-content: center;
