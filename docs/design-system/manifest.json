@@ -1,0 +1,57 @@
+{
+  "_readme": "Noematica Asset Pack manifest — 每一筆對應 assets/panel-art/ 底下一個實際存在的檔案。dimensions 是實測值。slice 只有九宮格外框類素材才有。target 是這個素材在 panel-skins.css 裡實際綁定的 CSS 選擇器。status 標記 active/reserved/unused。這次的來源素材是照 NAL 規範預先拆成個別元件的參考表，裁切信心比第一版高，但受限於這一輪 view 工具沒有正確渲染本地圖片，最終沒有逐一肉眼複查，改用色彩取樣做程式化交叉驗證（全部通過），仍建議使用前肉眼複查一次，尤其是 confidence:'medium' 的項目。",
+  "panelArt": [
+    { "file": "panel-art/n_frame.png", "panel": "f1", "element": "frame", "dimensions": [346, 304], "type": "border-image-9slice", "slice": {"top":40,"right":27,"bottom":21,"left":26}, "target": ".modal.modal-skin-f1", "status": "active", "confidence": "high" },
+    { "file": "panel-art/n_titlebar_tile.png", "panel": "f1", "element": "titlebar", "dimensions": [373, 40], "type": "tile", "target": "（保留備用）", "status": "reserved", "confidence": "high" },
+    { "file": "panel-art/n_badge.png", "panel": "f1", "element": "badge", "dimensions": [129, 139], "type": "icon", "target": "（保留備用，徽章烤在 frame 頂端切片內）", "status": "reserved", "confidence": "high" },
+    { "file": "panel-art/n_close.png", "panel": "f1", "element": "close", "dimensions": [62, 61], "type": "icon", "target": "（保留備用，目前用透明熱區）", "status": "reserved", "confidence": "medium" },
+    { "file": "panel-art/n_background_tile.png", "panel": "f1", "element": "background", "dimensions": [141, 248], "type": "tile", "target": ".modal.modal-skin-f1 .m-grid-wrap", "status": "active", "confidence": "high" },
+    { "file": "panel-art/n_btn_new.png", "panel": "f1", "element": "btn", "variant": "new", "dimensions": [87, 86], "type": "icon", "target": ".modal.modal-skin-f1 .n-btn-new", "status": "active", "confidence": "high" },
+    { "file": "panel-art/n_btn_edit.png", "panel": "f1", "element": "btn", "variant": "edit", "dimensions": [87, 86], "type": "icon", "target": ".modal.modal-skin-f1 .n-btn-edit", "status": "active", "confidence": "high" },
+    { "file": "panel-art/n_btn_delete.png", "panel": "f1", "element": "btn", "variant": "delete", "dimensions": [88, 86], "type": "icon", "target": ".modal.modal-skin-f1 .n-btn-delete", "status": "active", "confidence": "high" },
+
+    { "file": "panel-art/l_frame.png", "panel": "f2", "element": "frame", "dimensions": [329, 218], "type": "border-image-9slice", "slice": {"top":42,"right":25,"bottom":20,"left":24}, "note": "切片是估算值，未用色塊掃描精確量測", "target": ".modal.modal-skin-f2", "status": "active", "confidence": "medium" },
+    { "file": "panel-art/l_titlebar_tile.png", "panel": "f2", "element": "titlebar", "dimensions": [235, 38], "type": "tile", "target": "（保留備用）", "status": "reserved", "confidence": "medium" },
+    { "file": "panel-art/l_badge.png", "panel": "f2", "element": "badge", "dimensions": [96, 100], "type": "icon", "target": "（保留備用）", "status": "reserved", "confidence": "medium" },
+    { "file": "panel-art/l_close.png", "panel": "f2", "element": "close", "dimensions": [52, 51], "type": "icon", "target": "（保留備用，目前用透明熱區）", "status": "reserved", "confidence": "medium" },
+    { "file": "panel-art/l_background_tile.png", "panel": "f2", "element": "background", "dimensions": [175, 136], "type": "tile", "target": ".modal.modal-skin-f2 .m-grid-wrap", "status": "active", "confidence": "high" },
+    { "file": "panel-art/l_icon_people.png", "panel": "f2", "element": "icon", "variant": "people", "dimensions": [68, 67], "type": "icon", "target": ".modal.modal-skin-f2 .l-icon-people", "status": "active", "confidence": "high" },
+    { "file": "panel-art/l_icon_lock.png", "panel": "f2", "element": "icon", "variant": "lock", "dimensions": [68, 67], "type": "icon", "target": ".modal.modal-skin-f2 .l-icon-lock", "status": "active", "confidence": "high" },
+    { "file": "panel-art/l_icon_map.png", "panel": "f2", "element": "icon", "variant": "map", "dimensions": [68, 67], "type": "icon", "target": ".modal.modal-skin-f2 .l-icon-map", "status": "active", "confidence": "high" },
+
+    { "file": "panel-art/b_frame.png", "panel": "b", "element": "frame", "dimensions": [328, 388], "type": "border-image-9slice", "slice": {"top":47,"right":10,"bottom":23,"left":10}, "note": "取代舊版 851x882 那份，這次沒有把頁籤烤進外框", "target": ".modal.modal-skin-b", "status": "active", "confidence": "high" },
+    { "file": "panel-art/b_titlebar_tile.png", "panel": "b", "element": "titlebar", "dimensions": [278, 50], "type": "tile", "target": "（保留備用）", "status": "reserved", "confidence": "high" },
+    { "file": "panel-art/b_badge.png", "panel": "b", "element": "badge", "dimensions": [125, 137], "type": "icon", "target": "（保留備用）", "status": "reserved", "confidence": "high" },
+    { "file": "panel-art/b_close.png", "panel": "b", "element": "close", "dimensions": [66, 65], "type": "icon", "target": "（保留備用，目前用透明熱區）", "status": "reserved", "confidence": "high" },
+    { "file": "panel-art/b_slot.png", "panel": "b", "element": "slot", "dimensions": [129, 131], "type": "tile", "target": ".modal.modal-skin-b .m-item", "status": "active", "confidence": "high" },
+    { "file": "panel-art/b_background_tile.png", "panel": "b", "element": "background", "dimensions": [144, 242], "type": "tile", "target": "（保留備用）", "status": "reserved", "confidence": "high" },
+    { "file": "panel-art/b_btn_backpack.png", "panel": "b", "element": "btn", "variant": "backpack", "dimensions": [70, 64], "type": "icon", "target": ".modal.modal-skin-b .b-btn-validate", "status": "active", "confidence": "high" },
+    { "file": "panel-art/b_btn_trash.png", "panel": "b", "element": "btn", "variant": "trash", "dimensions": [67, 64], "type": "icon", "target": ".modal.modal-skin-b .b-btn-clear", "status": "active", "confidence": "high" },
+    { "file": "panel-art/b_btn_search.png", "panel": "b", "element": "btn", "variant": "search", "dimensions": [67, 64], "type": "icon", "target": null, "status": "unused", "confidence": "high" },
+    { "file": "panel-art/b_btn_sort.png", "panel": "b", "element": "btn", "variant": "sort", "dimensions": [68, 64], "type": "icon", "target": null, "status": "unused", "confidence": "high" },
+    { "file": "panel-art/b_tab_active.png", "panel": "b", "element": "tab", "state": "active", "dimensions": [88, 64], "type": "icon", "target": "（保留備用）", "status": "reserved", "confidence": "high" },
+    { "file": "panel-art/b_tab_inactive.png", "panel": "b", "element": "tab", "state": "inactive", "dimensions": [80, 64], "type": "icon", "target": "（保留備用）", "status": "reserved", "confidence": "high" },
+
+    { "file": "panel-art/h_frame.png", "panel": "h", "element": "frame", "dimensions": [360, 377], "type": "border-image-9slice", "slice": {"top":84,"right":22,"bottom":23,"left":16}, "note": "取代舊版 517x404 那份", "target": ".modal.modal-skin-h", "status": "active", "confidence": "high" },
+    { "file": "panel-art/h_titlebar_tile.png", "panel": "h", "element": "titlebar", "dimensions": [199, 43], "type": "tile", "target": "（保留備用）", "status": "reserved", "confidence": "high" },
+    { "file": "panel-art/h_badge.png", "panel": "h", "element": "badge", "dimensions": [106, 115], "type": "icon", "target": "（保留備用）", "status": "reserved", "confidence": "high" },
+    { "file": "panel-art/h_close.png", "panel": "h", "element": "close", "dimensions": [64, 64], "type": "icon", "target": "（保留備用，目前用透明熱區）", "status": "reserved", "confidence": "high" },
+    { "file": "panel-art/h_avatar_frame.png", "panel": "h", "element": "avatar-frame", "dimensions": [108, 116], "type": "icon", "target": ".modal.modal-skin-h .h-avatar（第一層）", "status": "active", "confidence": "high" },
+    { "file": "panel-art/h_avatar_default.png", "panel": "h", "element": "avatar", "variant": "default", "dimensions": [148, 155], "type": "icon", "target": ".modal.modal-skin-h .h-avatar（第二層）", "status": "active", "confidence": "high" },
+    { "file": "panel-art/h_avatar_happy.png", "panel": "h", "element": "avatar", "variant": "happy", "dimensions": [149, 155], "type": "icon", "target": ".modal.modal-skin-h .h-avatar.happy", "status": "active", "confidence": "high", "note": "CSS 已定義，panel-h.js 尚未實作表情切換邏輯" },
+    { "file": "panel-art/h_avatar_thinking.png", "panel": "h", "element": "avatar", "variant": "thinking", "dimensions": [150, 155], "type": "icon", "target": ".modal.modal-skin-h .h-avatar.thinking", "status": "active", "confidence": "high", "note": "同上" },
+    { "file": "panel-art/h_choice.png", "panel": "h", "element": "choice-btn", "dimensions": [331, 66], "type": "icon", "target": "（保留備用，panel-h.js 選項按鈕目前是純 CSS 樣式）", "status": "reserved", "confidence": "high" },
+    { "file": "panel-art/h_message_bg.png", "panel": "h", "element": "message-bg", "dimensions": [406, 192], "type": "tile", "target": "（保留備用，訊息泡泡目前是純色背景）", "status": "reserved", "confidence": "high" }
+  ],
+  "themes": [
+    { "id": "default", "file": "themes/default/theme.json", "status": "colorsOnly", "note": "未變更" },
+    { "id": "cyber", "file": "themes/cyber/theme.json", "status": "colorsOnly", "note": "未變更" },
+    { "id": "gamification", "file": "themes/gamification/theme.json", "status": "colorsOnly", "note": "未變更" }
+  ],
+  "animation": [],
+  "knownIssues": [
+    "這一輪處理素材時，view 工具沒有正確渲染本地圖片內容給我看（連先前已驗證過的舊檔案也顯示不出來），判斷是這個 session 的暫時性問題。改用連通區域偵測抓每個獨立色塊的像素邊界，加上色彩取樣交叉驗證（frame 類素材平均色應偏米色、titlebar 類素材平均色應偏藍色，全部通過），沒有逐一肉眼確認精確度，尤其是 confidence:'medium' 的 l_frame 系列（切片座標是估算值）。建議拿到素材後開 style-guide.html 實際看一次 F1/F2/B/H 四個 Modal 皮膚，如果邊框比例、關閉鈕位置不對，跟我說哪裡歪了我再調整。",
+    "F1/F2 兩個新面板的皮膚是套在既有的通用 .m-sidebar/.m-toolbar/.m-grid-wrap 結構上，但這兩個面板實際的功能內容（筆記列表、房間列表）目前還沒有實作，這次只做了視覺皮膚跟骨架，style-guide.html 裡的 demo 是示意內容，不是真實面板函式渲染的。",
+    "h_choice.png、h_message_bg.png、各 close/badge/titlebar 獨立版本、b_tab_active/inactive——已經裁出登記在案，但 CSS 還是沿用『frame 頂端切片已含標題列/徽章、關閉鈕用透明熱區疊加』的既有模式，沒有切換成『每個元素完全獨立貼圖』的更徹底作法（NAL §1 理想狀態）。這是刻意的漸進式做法，先求穩定可運作，這些素材已經備好供之後更細緻的重構使用。"
+  ]
+}

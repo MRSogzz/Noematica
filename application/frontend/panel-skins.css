@@ -8,81 +8,59 @@
    蓋掉預設的扁平深色樣式，但完全不動 hud-panels.js 裡的真實功能邏輯。
 
    技術做法：CSS border-image 把參考圖切成九宮格，只取「邊框」的四條
-   帶狀區域（上／右／下／左）當視窗邊框貼圖，中間（原圖裡畫的示範用格子／
-   頁籤）大部分捨棄不用，改用真正的功能性 DOM 蓋在上面。
+   帶狀區域（上／右／下／左）當視窗邊框貼圖，中間（原圖裡畫的示範用格子）
+   捨棄不用，改用真正的功能性 DOM 蓋在上面——側欄一律維持原本在左邊、
+   垂直排列的版面結構，不搬動位置（曾經把 B 的側欄搬成水平列，脫離
+   flex 版面流，導致格子版面計算壞掉、東西全部擠成一坨，這是明確教訓）。
 
    重要：.modal-header 是一個蓋在邊框圖上的「透明熱區」，用來放關閉／縮小鈕，
-   本身不該攔截點擊——第一版忘了加 pointer-events:none，導致熱區底下的
-   側欄／格子全部點不到，這裡統一修正：熱區本身穿透滑鼠事件，只有熱區
-   裡真正的按鈕（.modal-close 等）自己再打開 pointer-events:auto。
+   本身不該攔截點擊——熱區本身穿透滑鼠事件，只有熱區裡真正的按鈕
+   （.modal-close 等）自己再打開 pointer-events:auto。
    ============================================================ */
 
-/* ── B：模組背包（851×882）───────────────────────────────────────────── */
-/* 切割：上 134px（只到標題列結束，頁籤列讓給下面的真實 DOM）／
-   右 31px／下 108px（貨幣列＋四顆按鈕，當裝飾背景）／左 30px */
+/* ── B：模組背包（328×388，沒有把頁籤烤進外框，側欄維持原本左側垂直
+   位置）─────────────────────────────────────────────────────────── */
+/* 切割：上 47px（只到標題列結束）／右 10px／下 23px／左 10px */
 .modal.modal-skin-b {
   background: transparent;
   border-style: solid;
   border-color: transparent;
-  border-width: 134px 31px 108px 30px;
+  border-width: 47px 10px 23px 10px;
   border-image-source: url('assets/panel-art/b_frame.png');
-  border-image-slice: 134 31 108 30;
-  border-image-width: 134px 31px 108px 30px;
+  border-image-slice: 47 10 23 10;
+  border-image-width: 47px 10px 23px 10px;
   border-image-outset: 0;
   border-image-repeat: stretch;
   border-radius: 0;
   box-shadow: 0 24px 70px rgba(0,0,0,0.55);
 }
-
-/* 標題列熱區：只用來放關閉／縮小鈕，本身穿透點擊 */
 .modal.modal-skin-b .modal-header {
-  position: absolute; top: 0; left: 0; right: 0; height: 134px;
+  position: absolute; top: 0; left: 0; right: 0; height: 47px;
   background: transparent; border: none; padding: 0; z-index: 6;
   pointer-events: none;
 }
 .modal.modal-skin-b .modal-title { display: none; }
 .modal.modal-skin-b .modal-close {
-  position: absolute; top: 50%; right: 35px; transform: translateY(-50%);
+  position: absolute; top: 50%; right: 12px; transform: translateY(-50%);
   background: transparent; border: none; color: transparent;
-  width: 53px; height: 50px; pointer-events: auto; cursor: pointer;
+  width: 28px; height: 28px; pointer-events: auto; cursor: pointer;
 }
-/* 縮小鈕：原圖裡有畫，但目前 UI 沒有「縮小視窗」功能。這裡不做假的可點擊
-   熱區去騙使用者——沒有對應功能的按鈕，寧可讓它就是背景圖的一部分、
-   不能點，也不要做一個點了沒反應或行為不明的假按鈕。之後真的要做縮小
-   功能，再把這裡改成真正的 <button> 並接上 pointer-events:auto。 */
-
 .modal.modal-skin-b .modal-body { background: #f6ecd9; }
 
-/* 頁籤列：真正的互動 DOM，不是烤進圖片的裝飾。絕對定位貼在標題列正下方，
-   撐滿寬度，.m-content / .m-detail 用 margin-top 讓開這塊空間。
-   現在沒有個別頁籤圖片，先用素色 pill 樣式；之後每個分類要換成真圖，
-   對應 .m-cat[data-catid="..."] 這個 selector 加 background-image 即可，
-   不用動版面結構。 */
 .modal.modal-skin-b .m-sidebar {
-  position: absolute; top: 134px; left: 30px; right: 31px; height: 60px;
-  background: linear-gradient(180deg, #8a8175, #746b60);
-  border-bottom: 2px solid rgba(0,0,0,0.25);
-  flex-direction: row; align-items: center; justify-content: flex-start;
-  padding: 0 14px; gap: 8px; z-index: 4;
+  background: rgba(120,84,40,0.08); border-right: 2px solid rgba(120,84,40,0.18);
 }
 .modal.modal-skin-b .m-cat {
-  width: auto; flex-direction: row; gap: 6px;
-  padding: 7px 16px; border-radius: 18px;
-  background: rgba(0,0,0,0.15); border: 1px solid rgba(0,0,0,0.2);
+  background: rgba(255,255,255,0.35); border: 1px solid rgba(120,84,40,0.18);
 }
-.modal.modal-skin-b .m-cat:hover { background: rgba(0,0,0,0.25); }
+.modal.modal-skin-b .m-cat:hover { background: rgba(255,255,255,0.55); }
 .modal.modal-skin-b .m-cat.active {
   background: linear-gradient(180deg, #f0b545, #d98a1f);
   border-color: #a5661c;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
-.modal.modal-skin-b .m-cat-icon { font-size: 15px; }
-.modal.modal-skin-b .m-cat-lbl { font-size: 11px; color: rgba(255,255,255,0.7); }
+.modal.modal-skin-b .m-cat-lbl { color: rgba(90,64,38,0.68); }
 .modal.modal-skin-b .m-cat.active .m-cat-lbl { color: #3a2408; font-weight: 700; }
-.modal.modal-skin-b .m-cat-divider { display: none; }
-
-.modal.modal-skin-b .m-content { margin-top: 60px; }
-.modal.modal-skin-b .m-detail  { margin-top: 60px; }
 
 .modal.modal-skin-b .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
 .modal.modal-skin-b .m-search {
@@ -91,8 +69,6 @@
 .modal.modal-skin-b .m-search::placeholder { color: rgba(90,64,38,0.4); }
 
 .modal.modal-skin-b .m-grid-wrap { background: transparent; }
-/* 格子直接用裁出來的實際格子紋理當背景，不是純色 box——這樣不管真實
-   模組有幾筆，每一格看起來都跟參考圖裡的道具格一致 */
 .modal.modal-skin-b .m-item {
   background-image: url('assets/panel-art/b_slot.png');
   background-size: 100% 100%; background-color: transparent;
@@ -107,49 +83,43 @@
 .modal.modal-skin-b .m-attr-text { color: #4a3520; }
 .modal.modal-skin-b .m-detail-desc { color: rgba(74,53,32,0.75); }
 
-/* 校驗／清除：真正有作用的兩顆按鈕，換成裁自參考圖的按鈕貼圖，絕對定位
-   貼到底部裝飾列上對應「背包」「垃圾桶」圖案的原始位置（座標從原圖
-   851×882 量出來，851-647=204／851-805=46，882-833=49）。 */
 .modal.modal-skin-b .b-btn-validate,
 .modal.modal-skin-b .b-btn-clear {
-  position: absolute; bottom: 49px;
-  width: 64px; height: 60px; padding: 0; border-radius: 10px;
-  background-size: cover; background-position: center; background-repeat: no-repeat;
-  border: none; font-size: 0; z-index: 4;
+  width: 30px; height: 30px; padding: 0; border-radius: 8px;
+  background-size: contain; background-position: center; background-repeat: no-repeat;
+  border: none; font-size: 0; flex: none;
 }
-.modal.modal-skin-b .b-btn-validate { right: 200px; background-image: url('assets/panel-art/b_btn_backpack.png'); }
-.modal.modal-skin-b .b-btn-clear    { right: 42px;  background-image: url('assets/panel-art/b_btn_trash.png'); }
+.modal.modal-skin-b .b-btn-validate { background-image: url('assets/panel-art/b_btn_backpack.png'); }
+.modal.modal-skin-b .b-btn-clear    { background-image: url('assets/panel-art/b_btn_trash.png'); }
 .modal.modal-skin-b .b-btn-validate:hover,
 .modal.modal-skin-b .b-btn-clear:hover { filter: brightness(1.12); }
-/* 校驗／清除本來掛在 .m-toolbar 裡（版面在標題列下方），現在用絕對定位
-   把「視覺位置」搬到跟原圖一致的右下角，DOM 位置沒有動，功能完全不變 */
 
 
-/* ── H：AI 知識整理小幫手（517×404）──────────────────────────────────── */
-/* 切割：上 91px（標題列＋小幫手形象徽章＋關閉鈕）／右 36px／下 30px／左 26px */
+/* ── H：AI 知識整理小幫手（360×377）───────────────────────────────── */
+/* 切割：上 84px／右 22px／下 23px／左 16px */
 .modal.modal-skin-h {
   background: transparent;
   border-style: solid;
   border-color: transparent;
-  border-width: 91px 36px 30px 26px;
+  border-width: 84px 22px 23px 16px;
   border-image-source: url('assets/panel-art/h_frame.png');
-  border-image-slice: 91 36 30 26;
-  border-image-width: 91px 36px 30px 26px;
+  border-image-slice: 84 22 23 16;
+  border-image-width: 84px 22px 23px 16px;
   border-image-outset: 0;
   border-image-repeat: stretch;
   border-radius: 0;
   box-shadow: 0 24px 70px rgba(0,0,0,0.55);
 }
 .modal.modal-skin-h .modal-header {
-  position: absolute; top: 0; left: 0; right: 0; height: 91px;
+  position: absolute; top: 0; left: 0; right: 0; height: 84px;
   background: transparent; border: none; padding: 0; z-index: 6;
   pointer-events: none;
 }
 .modal.modal-skin-h .modal-title { display: none; }
 .modal.modal-skin-h .modal-close {
-  position: absolute; top: 50%; right: 26px; transform: translateY(-50%);
+  position: absolute; top: 50%; right: 20px; transform: translateY(-50%);
   background: transparent; border: none; color: transparent;
-  width: 39px; height: 32px; pointer-events: auto; cursor: pointer;
+  width: 28px; height: 28px; pointer-events: auto; cursor: pointer;
 }
 .modal.modal-skin-h .modal-body { background: #f7ecd6; }
 
@@ -181,6 +151,173 @@
 .modal.modal-skin-h .m-attr-text { color: #4a3520; }
 .modal.modal-skin-h .m-detail-desc { color: rgba(74,53,32,0.75); }
 
-/* panel-h.js 是完全自訂版面（聊天室 UI），不是走 .m-sidebar/.m-item 那一套，
-   這裡另外對 .wiki-ai-panel 內部元素做暖色調整，讓它跟邊框協調 */
+/* panel-h.js 是完全自訂版面（聊天室 UI），不是走 .m-sidebar/.m-item 那一套 */
 .modal.modal-skin-h .wiki-ai-panel { background: transparent; }
+/* 小幫手頭像：h_avatar_frame.png 當外框，h_avatar_default/happy/thinking.png
+   當實際頭像圖——三種表情供 panel-h.js 依對話狀態切換（例如思考中顯示
+   h_avatar_thinking），目前 panel-h.js 還沒有實作表情切換邏輯，這裡先把
+   CSS class 定義好，預設用 h_avatar_default，之後接上狀態切換只需要在
+   JS 裡切換這個 class，不用再動 CSS。 */
+.modal.modal-skin-h .h-avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  background-image: url('assets/panel-art/h_avatar_frame.png'), url('assets/panel-art/h_avatar_default.png');
+  background-size: contain, 80% 80%; background-position: center, center; background-repeat: no-repeat;
+}
+.modal.modal-skin-h .h-avatar.happy    { background-image: url('assets/panel-art/h_avatar_frame.png'), url('assets/panel-art/h_avatar_happy.png'); }
+.modal.modal-skin-h .h-avatar.thinking { background-image: url('assets/panel-art/h_avatar_frame.png'), url('assets/panel-art/h_avatar_thinking.png'); }
+
+
+/* ── N：個人日誌／筆記（346×304）────────────────────────────────────
+   對應 hud-core.js 的 F1 鍵（個人日誌），美術素材前綴是 n_（筆記 Notes），
+   跟鍵位 f1 不同名，這裡 openModal() 用 id==='f1' 判斷、CSS 用
+   .modal-skin-f1 命名（跟其他面板一致用鍵位命名，不用素材前綴命名，
+   避免以後鍵位跟素材集改了對應關係時 class 名稱變得誤導）。 ───────── */
+/* 切割：上 40px／右 27px（346-319）／下 21px（304-283，估）／左 26px */
+.modal.modal-skin-f1 {
+  background: transparent;
+  border-style: solid;
+  border-color: transparent;
+  border-width: 40px 27px 21px 26px;
+  border-image-source: url('assets/panel-art/n_frame.png');
+  border-image-slice: 40 27 21 26;
+  border-image-width: 40px 27px 21px 26px;
+  border-image-outset: 0;
+  border-image-repeat: stretch;
+  border-radius: 0;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.55);
+}
+.modal.modal-skin-f1 .modal-header {
+  position: absolute; top: 0; left: 0; right: 0; height: 40px;
+  background: transparent; border: none; padding: 0; z-index: 6;
+  pointer-events: none;
+}
+.modal.modal-skin-f1 .modal-title { display: none; }
+.modal.modal-skin-f1 .modal-close {
+  position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+  background: transparent; border: none; color: transparent;
+  width: 24px; height: 24px; pointer-events: auto; cursor: pointer;
+}
+.modal.modal-skin-f1 .modal-body { background: #f5ecd9; }
+
+.modal.modal-skin-f1 .m-sidebar { background: rgba(120,84,40,0.08); border-right: 2px solid rgba(120,84,40,0.18); }
+.modal.modal-skin-f1 .m-cat { background: rgba(255,255,255,0.35); border: 1px solid rgba(120,84,40,0.18); }
+.modal.modal-skin-f1 .m-cat:hover { background: rgba(255,255,255,0.55); }
+.modal.modal-skin-f1 .m-cat.active {
+  background: linear-gradient(180deg, #f0b545, #d98a1f);
+  border-color: #a5661c; box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+.modal.modal-skin-f1 .m-cat-lbl { color: rgba(90,64,38,0.68); }
+.modal.modal-skin-f1 .m-cat.active .m-cat-lbl { color: #3a2408; font-weight: 700; }
+
+.modal.modal-skin-f1 .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
+.modal.modal-skin-f1 .m-search { background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.25); color: #4a3520; }
+.modal.modal-skin-f1 .m-search::placeholder { color: rgba(90,64,38,0.4); }
+
+.modal.modal-skin-f1 .m-grid-wrap {
+  background-image: url('assets/panel-art/n_background_tile.png');
+  background-repeat: repeat;
+}
+.modal.modal-skin-f1 .m-item { background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.2); }
+.modal.modal-skin-f1 .m-item:hover { border-color: rgba(196,140,60,0.5); background: rgba(255,255,255,0.75); }
+.modal.modal-skin-f1 .m-item-name { color: #4a3520 !important; }
+
+.modal.modal-skin-f1 .m-detail { background: rgba(255,255,255,0.4); border-left: 1px solid rgba(120,84,40,0.15); }
+.modal.modal-skin-f1 .m-detail-name { color: #4a3520; }
+.modal.modal-skin-f1 .m-attr-text { color: #4a3520; }
+.modal.modal-skin-f1 .m-detail-desc { color: rgba(74,53,32,0.75); }
+
+/* 新增/編輯/刪除工具列按鈕（對應 n_btn_new/edit/delete.png），
+   panel-h.js 等價的 F1 面板實作還沒有這三顆按鈕的真實 DOM/功能，
+   這裡先把 class 定義好、素材接上，等 F1 面板實作那三個功能時
+   直接套用這幾個 class 就有對應美術，不用另外再裁圖。 */
+.modal.modal-skin-f1 .n-btn-new,
+.modal.modal-skin-f1 .n-btn-edit,
+.modal.modal-skin-f1 .n-btn-delete {
+  width: 26px; height: 26px; padding: 0; border-radius: 6px;
+  background-size: contain; background-position: center; background-repeat: no-repeat;
+  border: none; font-size: 0;
+}
+.modal.modal-skin-f1 .n-btn-new    { background-image: url('assets/panel-art/n_btn_new.png'); }
+.modal.modal-skin-f1 .n-btn-edit   { background-image: url('assets/panel-art/n_btn_edit.png'); }
+.modal.modal-skin-f1 .n-btn-delete { background-image: url('assets/panel-art/n_btn_delete.png'); }
+
+
+/* ── L：協作大廳（329×218）────────────────────────────────────────
+   對應 F2 鍵（協作大廳），美術素材前綴 l_，CSS class 用鍵位 f2 命名，
+   理由同上（跟素材前綴脫鉤，避免對應關係改了 class 名稱誤導）。 ───── */
+/* 切割：上 42px（估，L frame 較矮）／右 25px／下 20px／左 24px */
+.modal.modal-skin-f2 {
+  background: transparent;
+  border-style: solid;
+  border-color: transparent;
+  border-width: 42px 25px 20px 24px;
+  border-image-source: url('assets/panel-art/l_frame.png');
+  border-image-slice: 42 25 20 24;
+  border-image-width: 42px 25px 20px 24px;
+  border-image-outset: 0;
+  border-image-repeat: stretch;
+  border-radius: 0;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.55);
+}
+.modal.modal-skin-f2 .modal-header {
+  position: absolute; top: 0; left: 0; right: 0; height: 42px;
+  background: transparent; border: none; padding: 0; z-index: 6;
+  pointer-events: none;
+}
+.modal.modal-skin-f2 .modal-title { display: none; }
+.modal.modal-skin-f2 .modal-close {
+  position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+  background: transparent; border: none; color: transparent;
+  width: 24px; height: 24px; pointer-events: auto; cursor: pointer;
+}
+.modal.modal-skin-f2 .modal-body { background: #f5ecd9; }
+
+.modal.modal-skin-f2 .m-sidebar { background: rgba(59,104,148,0.06); border-right: 2px solid rgba(120,84,40,0.18); }
+.modal.modal-skin-f2 .m-cat { background: rgba(255,255,255,0.35); border: 1px solid rgba(120,84,40,0.18); }
+.modal.modal-skin-f2 .m-cat:hover { background: rgba(255,255,255,0.55); }
+.modal.modal-skin-f2 .m-cat.active {
+  background: rgba(59,104,148,0.15); border-color: #3b6894; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.modal.modal-skin-f2 .m-cat-lbl { color: rgba(90,64,38,0.68); }
+.modal.modal-skin-f2 .m-cat.active .m-cat-lbl { color: #2c5a86; font-weight: 700; }
+
+.modal.modal-skin-f2 .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
+.modal.modal-skin-f2 .m-search { background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.25); color: #4a3520; }
+.modal.modal-skin-f2 .m-search::placeholder { color: rgba(90,64,38,0.4); }
+
+.modal.modal-skin-f2 .m-grid-wrap {
+  background-image: url('assets/panel-art/l_background_tile.png');
+  background-repeat: repeat;
+}
+.modal.modal-skin-f2 .m-item { background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.2); }
+.modal.modal-skin-f2 .m-item:hover { border-color: rgba(59,104,148,0.4); background: rgba(255,255,255,0.75); }
+.modal.modal-skin-f2 .m-item-name { color: #4a3520 !important; }
+
+.modal.modal-skin-f2 .m-detail { background: rgba(255,255,255,0.4); border-left: 1px solid rgba(120,84,40,0.15); }
+.modal.modal-skin-f2 .m-detail-name { color: #4a3520; }
+.modal.modal-skin-f2 .m-attr-text { color: #4a3520; }
+.modal.modal-skin-f2 .m-detail-desc { color: rgba(74,53,32,0.75); }
+
+/* 房間狀態徽章（等待中/進行中/已滿/已鎖定）——語意色，比照 NDL §2.4，
+   不做成圖片，跟 NUG「狀態語意固定不跟主題走」的原則一致，這幾個顏色
+   組件庫已經有現成的 CSS 慣例（見 NDL 語意色表），沿用即可，不用另外
+   裁圖，即使參考圖裡有畫這幾個徽章的視覺樣式，用 CSS 重現比較容易
+   跟系統其他地方的語意色保持一致，不會變成第三套獨立的狀態色系統。 */
+.modal.modal-skin-f2 .l-status {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; padding: 2px 8px; border-radius: 999px; font-weight: 700;
+}
+.modal.modal-skin-f2 .l-status.waiting      { background: rgba(148,163,184,0.18); color: #64748b; }
+.modal.modal-skin-f2 .l-status.in-progress  { background: rgba(74,222,128,0.18); color: #16803d; }
+.modal.modal-skin-f2 .l-status.full         { background: rgba(248,113,113,0.18); color: #b91c1c; }
+.modal.modal-skin-f2 .l-status.locked       { background: rgba(148,163,184,0.18); color: #64748b; }
+
+.modal.modal-skin-f2 .l-icon-people,
+.modal.modal-skin-f2 .l-icon-lock,
+.modal.modal-skin-f2 .l-icon-map {
+  width: 20px; height: 20px; display: inline-block;
+  background-size: contain; background-position: center; background-repeat: no-repeat;
+}
+.modal.modal-skin-f2 .l-icon-people { background-image: url('assets/panel-art/l_icon_people.png'); }
+.modal.modal-skin-f2 .l-icon-lock   { background-image: url('assets/panel-art/l_icon_lock.png'); }
+.modal.modal-skin-f2 .l-icon-map    { background-image: url('assets/panel-art/l_icon_map.png'); }

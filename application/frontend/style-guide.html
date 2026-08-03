@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Noematica UI Kit — Living Style Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<!-- 直接載入真實系統的 CSS，不是重畫一份假的——這份文件會跟著 hud.css / panel-skins.css
+     的真實變更自動同步，不用手動維護兩份。 -->
+<link rel="stylesheet" href="hud.css" />
+<link rel="stylesheet" href="panel-skins.css" />
+<style>
+  /* ============================================================
+     以下是「風格指南自己的」版面樣式，跟 hud.css/panel-skins.css 的實際
+     元件樣式完全分開——這裡只負責排版導覽列、卡片外框、複製按鈕這類
+     風格指南專屬的 UI，不影響、也不覆蓋任何真實元件的長相。
+     ============================================================ */
+  body { overflow: auto; background: #0b0f1a; color: var(--text); font-family: 'JetBrains Mono', monospace; }
+
+  .sg-layout { display: flex; min-height: 100vh; }
+  .sg-nav {
+    position: sticky; top: 0; align-self: flex-start; width: 220px; flex-shrink: 0;
+    height: 100vh; overflow-y: auto; padding: 24px 16px;
+    background: rgba(0,0,0,0.35); border-right: 1px solid rgba(255,255,255,0.08);
+  }
+  .sg-nav h1 { font-family: 'Noto Serif SC', serif; font-size: 16px; margin-bottom: 4px; letter-spacing: .06em; }
+  .sg-nav .sg-sub { font-size: 10px; color: var(--muted); margin-bottom: 20px; }
+  .sg-nav a {
+    display: block; padding: 6px 10px; margin-bottom: 2px; border-radius: 6px;
+    font-size: 12px; color: rgba(255,255,255,0.65); text-decoration: none;
+    transition: background .12s, color .12s;
+  }
+  .sg-nav a:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+  .sg-nav .sg-nav-group { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin: 16px 0 4px; padding: 0 10px; }
+
+  .sg-main { flex: 1; padding: 40px 48px 120px; max-width: 1100px; }
+  .sg-section { margin-bottom: 64px; scroll-margin-top: 24px; }
+  .sg-section h2 { font-family: 'Noto Serif SC', serif; font-size: 22px; margin-bottom: 6px; }
+  .sg-section .sg-desc { font-size: 12px; color: rgba(255,255,255,0.55); margin-bottom: 20px; line-height: 1.7; max-width: 720px; }
+  .sg-section h3 { font-size: 13px; color: var(--accent); margin: 28px 0 12px; letter-spacing: .04em; }
+
+  .sg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .sg-card {
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+    padding: 14px; position: relative;
+  }
+  .sg-swatch { width: 100%; height: 52px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.12); }
+  .sg-card .sg-name { font-size: 12px; font-weight: 700; color: var(--text); }
+  .sg-card .sg-meta { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .sg-copy {
+    position: absolute; top: 10px; right: 10px; font-size: 9px; padding: 3px 7px; border-radius: 4px;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: var(--text);
+    cursor: pointer; opacity: 0; transition: opacity .12s;
+  }
+  .sg-card:hover .sg-copy { opacity: 1; }
+  .sg-copy:hover { background: rgba(255,255,255,0.18); }
+  .sg-copy.copied { background: #4ade80; color: #0b0f1a; opacity: 1; }
+
+  .sg-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+  .sg-demo-box {
+    position: relative; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.15);
+    border-radius: 10px; padding: 20px; margin-bottom: 12px; overflow: hidden;
+  }
+  .sg-demo-label { font-size: 10px; color: var(--muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: .08em; }
+
+  pre.sg-code {
+    background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;
+    padding: 12px 14px; font-size: 11px; color: #a5f3c4; overflow-x: auto; margin-top: 8px;
+  }
+
+  /* Spacing/Elevation/Motion 示範用的小方塊 */
+  .sg-sp-bar { background: var(--accent); height: 16px; border-radius: 3px; }
+  .sg-elev-box {
+    width: 90px; height: 60px; border-radius: 8px; background: rgba(20,20,35,0.9);
+    display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--muted);
+  }
+  .sg-motion-box {
+    width: 44px; height: 44px; border-radius: 8px; background: var(--accent);
+    cursor: pointer;
+  }
+
+  /* .modal 用 92vw/90vh 這種視窗相對單位，直接塞進風格指南的小預覽框會爆版，
+     這裡針對「在 .sg-modal-demo 容器裡」的 .modal 特別覆寫成填滿容器、
+     用相對定位而不是絕對定位鋪滿視口——只影響這份風格指南裡的預覽展示，
+     不影響 hud-main.html 實際運作時的 .modal 行為（那邊沒有 .sg-modal-demo 這層）。 */
+  .sg-modal-demo { position: relative; height: 460px; border-radius: 10px; overflow: hidden; background: #05070c; }
+  .sg-modal-demo .modal {
+    position: absolute; inset: 12px; top: 12px; left: 12px;
+    width: auto; height: auto; max-width: none; max-height: none;
+    transform: none; opacity: 1; pointer-events: auto;
+  }
+  .sg-hk-demo { position: relative; height: 90px; }
+  .sg-hk-demo .hk-wrap { position: static; display: inline-flex; }
+</style>
+</head>
+<body>
+
+<div class="sg-layout">
+  <nav class="sg-nav">
+    <h1>Noematica UI Kit</h1>
+    <div class="sg-sub">Living Style Guide · 讀 hud.css 即時渲染</div>
+
+    <div class="sg-nav-group">NDL — 設計語言</div>
+    <a href="#colors">色彩系統</a>
+    <a href="#typography">字體</a>
+    <a href="#spacing">Spacing</a>
+    <a href="#elevation">Elevation</a>
+    <a href="#motion">動畫</a>
+    <a href="#states">元件狀態</a>
+
+    <div class="sg-nav-group">元件</div>
+    <a href="#hotkeys">熱鍵圓鈕</a>
+    <a href="#modal-default">Modal（預設）</a>
+    <a href="#modal-b">Modal（B 皮膚）</a>
+    <a href="#modal-h">Modal（H 皮膚）</a>
+    <a href="#modal-f1">Modal（F1 皮膚）</a>
+    <a href="#modal-f2">Modal（F2 皮膚）</a>
+    <a href="#grid-items">格狀道具</a>
+    <a href="#category-tabs">分類頁籤</a>
+
+    <div class="sg-nav-group">NUG — 知識概念</div>
+    <a href="#nug-atom">Atom 可靠度</a>
+    <a href="#nug-stance">Observation 立場</a>
+    <a href="#nug-confidence">Confidence 分級</a>
+  </nav>
+
+  <main class="sg-main">
+
+    <!-- ============================================================ -->
+    <section class="sg-section" id="colors">
+      <h2>色彩系統</h2>
+      <p class="sg-desc">三層色彩哲學：Tier 1 美觀色跟著主題走，Tier 2 識別色／Tier 3 語意色固定不變。完整規則見 <code>NDL.md</code> §2。</p>
+
+      <h3>Tier 1 · 美觀色（跟主題走）</h3>
+      <div class="sg-grid" id="sg-tier1"></div>
+
+      <h3>Tier 2 · 識別色（固定，功能招牌）</h3>
+      <div class="sg-grid" id="sg-tier2"></div>
+
+      <h3>Tier 3 · 語意色（固定，帶意義）</h3>
+      <div class="sg-grid" id="sg-tier3"></div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="sg-section" id="typography">
+      <h2>字體</h2>
+      <p class="sg-desc">UI／資料一律 JetBrains Mono；標題／裝飾性文字用 Noto Serif SC，不進入內文。</p>
+      <div class="sg-card" style="margin-bottom:12px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:20px">JetBrains Mono — 0123456789 資料與介面文字</div>
+        <div class="sg-meta" style="margin-top:6px">--fs-xl (20px) 示範；實際字級 token 見下表</div>
+      </div>
+      <div class="sg-card" style="margin-bottom:20px">
+        <div style="font-family:'Noto Serif SC',serif;font-size:20px;letter-spacing:.08em">Noto Serif SC — 標題與裝飾性文字</div>
+        <div class="sg-meta" style="margin-top:6px">只用於標題層級，不進入內文</div>
+      </div>
+      <div class="sg-grid" id="sg-fontscale"></div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="sg-section" id="spacing">
+      <h2>Spacing</h2>
+      <p class="sg-desc">4px 基準格線。新元件的 padding/gap/margin 一律從這組 token 選，不新增中間值。</p>
+      <div id="sg-spacing"></div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="sg-section" id="elevation">
+      <h2>Elevation</h2>
+      <p class="sg-desc">z-index 分五層，層級越高陰影越大越柔（跟整體手繪調性一致，不用生硬小陰影）。</p>
+      <div class="sg-row" id="sg-elevation"></div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="sg-section" id="motion">
+      <h2>動畫</h2>
+      <p class="sg-desc">只對 transform/opacity 做動畫。滑鼠移到方塊上觸發，感受三種時長的差異。</p>
+      <div class="sg-row" id="sg-motion"></div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="sg-section" id="states">
+      <h2>元件狀態</h2>
+      <p class="sg-desc">以熱鍵按鈕為例，展示 Normal / Hover / Active / Disabled 四種狀態（Hover 請實際移入滑鼠感受）。</p>
+      <div class="sg-hk-demo">
+        <div class="hk-wrap" style="margin-right:24px">
+          <div class="hk"><div class="hk-ico" style="border-color:rgba(232,200,115,.5)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8C873" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg></div></div>
+        </div>
+        <div class="hk-wrap" style="margin-right:24px">
+          <div class="hk active"><div class="hk-ico" style="border-color:rgba(232,200,115,.5)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8C873" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg></div></div>
+        </div>
+        <div class="hk-wrap" style="opacity:.4;pointer-events:none">
+          <div class="hk"><div class="hk-ico" style="border-color:rgba(232,200,115,.5)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8C873" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg></div></div>
+        </div>
+      </div>
+      <div class="sg-row" style="font-size:10px;color:var(--muted)">
+        <span>← Normal（移入試 Hover）</span><span>Active（掛 .active）</span><span>Disabled（opacity+pointer-events:none）</span>
+      </div>
+      <p class="sg-desc" style="margin-top:16px;color:#fbbf24">⚠️ Focus 狀態目前系統缺失（見 NDL §7），這裡沒有東西可以展示——這是已知待補項，不是這份風格指南漏做。</p>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="sg-section" id="hotkeys">
+      <h2>熱鍵圓鈕</h2>
+      <p class="sg-desc">所有熱鍵共用 <code>--key-size</code> 變數，不在個別按鈕上寫死尺寸（ESC 曾經因為自己蓋了一份 40px 而變小，見 NDL §1 教訓）。</p>
+      <div class="sg-hk-demo" style="display:flex;gap:16px">
+        <div class="hk-wrap"><div class="hk"><div class="hk-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8C873" stroke-width="2"><path d="M4 19h16M4 15h10M4 11h16M4 7h10"/></svg></div></div></div>
+        <div class="hk-wrap"><div class="hk"><div class="hk-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4fc3f7" stroke-width="2"><circle cx="12" cy="8" r="3"/><path d="M5 20c0-4 3-6 7-6s7 2 7 6"/></svg></div></div></div>
+        <div class="hk-wrap"><div class="hk"><div class="hk-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A97FE8" stroke-width="2"><rect x="5" y="4" width="14" height="16" rx="2"/></svg></div></div></div>
+        <div class="hk-wrap"><div class="hk"><div class="hk-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ECDC4" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 10h.01M15 10h.01M8 15c1.5 1.5 6.5 1.5 8 0"/></svg></div></div></div>
+      </div>
+      <pre class="sg-code">&lt;div class="hk-wrap"&gt;
+  &lt;div class="hk"&gt;&lt;div class="hk-ico"&gt;&lt;svg ...&gt;&lt;/svg&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+/* 尺寸統一吃 --key-size，主題可用 layout.keyBtnSize 覆寫 */</pre>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="sg-section" id="modal-default">
+      <h2>Modal — 預設扁平樣式</h2>
+      <p class="sg-desc">還沒有對應美術皮膚的面板（F1/F2/F3/F4）用這個樣式，不是空白或報錯的降級狀態，是正式的預設外觀。</p>
+      <div class="sg-modal-demo">
+        <div class="modal open">
+          <div class="modal-header">
+            <span class="modal-title">範例面板標題</span>
+            <button class="modal-close">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="m-sidebar">
+              <div class="m-cat active"><span class="m-cat-icon">🧪</span><span class="m-cat-lbl">全部</span></div>
+              <div class="m-cat"><span class="m-cat-icon">✅</span><span class="m-cat-lbl">DONE</span></div>
+            </div>
+            <div class="m-content">
+              <div class="m-toolbar" style="padding:8px 12px;font-size:11px;color:var(--muted)">工具列示範內容</div>
+              <div class="m-grid-wrap"><div class="m-item-grid">
+                <div class="m-item"><div class="m-item-icon">📦</div><div class="m-item-name">項目 A</div></div>
+                <div class="m-item active"><div class="m-item-icon">📦</div><div class="m-item-name">項目 B（選中）</div></div>
+              </div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="sg-section" id="modal-b">
+      <h2>Modal — B（模組背包）皮膚</h2>
+      <p class="sg-desc"><code>.modal-skin-b</code>：九宮格外框只切到標題列（頁籤列讓給真實 DOM），道具格用裁出的紋理逐格套用，側欄維持原本左側垂直位置（曾經誤搬成水平列導致版面壞掉，見 NAL 案例）。</p>
+      <div class="sg-modal-demo">
+        <div class="modal open modal-skin-b">
+          <div class="modal-header"><span class="modal-title">模組背包</span><button class="modal-close">✕</button></div>
+          <div class="modal-body">
+            <div class="m-sidebar">
+              <div class="m-cat active"><span class="m-cat-icon">🧪</span><span class="m-cat-lbl">全部</span></div>
+              <div class="m-cat"><span class="m-cat-icon">✅</span><span class="m-cat-lbl">DONE</span></div>
+              <div class="m-cat"><span class="m-cat-icon">⚙️</span><span class="m-cat-lbl">WIP</span></div>
+              <div class="m-cat"><span class="m-cat-icon">🚫</span><span class="m-cat-lbl">BLOCKED</span></div>
+            </div>
+            <div class="m-content">
+              <div class="m-toolbar" style="padding:8px 12px">
+                <button class="m-action-btn secondary b-btn-validate" style="margin-left:8px;padding:3px 8px;font-size:9px" title="校驗">校驗</button>
+                <button class="m-action-btn secondary b-btn-clear" style="padding:3px 8px;font-size:9px" title="清除">清除</button>
+              </div>
+              <div class="m-grid-wrap"><div class="m-item-grid">
+                <div class="m-item"><div class="m-item-name">embedVec</div></div>
+                <div class="m-item"><div class="m-item-name">tokenize</div></div>
+                <div class="m-item"></div><div class="m-item"></div><div class="m-item"></div>
+              </div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="sg-section" id="modal-h">
+      <h2>Modal — H（AI 小幫手）皮膚</h2>
+      <p class="sg-desc"><code>.modal-skin-h</code>：沒有頁籤列，外框直接含整個標題列＋徽章＋關閉鈕。</p>
+      <div class="sg-modal-demo" style="height:340px">
+        <div class="modal open modal-skin-h">
+          <div class="modal-header"><span class="modal-title">AI 小幫手</span><button class="modal-close">✕</button></div>
+          <div class="modal-body">
+            <div class="m-sidebar">
+              <div class="m-cat active"><span class="m-cat-lbl">全部文件</span></div>
+            </div>
+            <div class="m-content">
+              <div class="m-grid-wrap" style="padding:16px;font-size:12px;color:#4a3520">（wiki-ai-panel 聊天室內容示意）</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="sg-section" id="modal-f1">
+      <h2>Modal — F1（個人日誌）皮膚</h2>
+      <p class="sg-desc"><code>.modal-skin-f1</code>：這次的參考素材是照 NAL 規範預先拆好的個別元件，不是單張合成 mockup，切片座標更乾淨。</p>
+      <div class="sg-modal-demo" style="height:340px">
+        <div class="modal open modal-skin-f1">
+          <div class="modal-header"><span class="modal-title">個人日誌</span><button class="modal-close">✕</button></div>
+          <div class="modal-body">
+            <div class="m-sidebar">
+              <div class="m-cat active"><span class="m-cat-lbl">全部筆記</span></div>
+              <div class="m-cat"><span class="m-cat-lbl">已加星號</span></div>
+            </div>
+            <div class="m-content">
+              <div class="m-toolbar" style="padding:8px 12px;display:flex;gap:6px">
+                <button class="n-btn-new" title="新增"></button>
+                <button class="n-btn-edit" title="編輯"></button>
+                <button class="n-btn-delete" title="刪除"></button>
+              </div>
+              <div class="m-grid-wrap" style="padding:12px;font-size:12px;color:#4a3520">（筆記列表內容示意）</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="sg-section" id="modal-f2">
+      <h2>Modal — F2（協作大廳）皮膚</h2>
+      <p class="sg-desc"><code>.modal-skin-f2</code>：房間狀態徽章刻意不做成圖片，沿用 NDL 語意色，避免變成第三套獨立的狀態色系統。</p>
+      <div class="sg-modal-demo" style="height:340px">
+        <div class="modal open modal-skin-f2">
+          <div class="modal-header"><span class="modal-title">協作大廳</span><button class="modal-close">✕</button></div>
+          <div class="modal-body">
+            <div class="m-sidebar">
+              <div class="m-cat active"><span class="m-cat-lbl">全部房間</span></div>
+            </div>
+            <div class="m-content">
+              <div class="m-grid-wrap" style="padding:12px;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#4a3520">
+                  <span class="l-icon-people"></span> 研究小組 A
+                  <span class="l-status in-progress">進行中</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#4a3520">
+                  <span class="l-icon-lock"></span> 私人討論室
+                  <span class="l-status locked">已鎖定</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="sg-section" id="grid-items">
+      <h2>格狀道具（空格填充）</h2>
+      <p class="sg-desc">資料筆數不夠時用空格填充維持容器完整性（NDL §7.1）——下面 5 格只有 2 格有真實資料，其餘是不可互動的填充格。</p>
+      <div class="sg-demo-box" style="background:#f6ecd9">
+        <div class="m-item-grid" style="grid-template-columns:repeat(5,90px)">
+          <div class="m-item" style="background-image:url('assets/panel-art/b_slot.png');background-size:100% 100%;border:none"><div class="m-item-name" style="color:#4a3520">模組 A</div></div>
+          <div class="m-item" style="background-image:url('assets/panel-art/b_slot.png');background-size:100% 100%;border:none"><div class="m-item-name" style="color:#4a3520">模組 B</div></div>
+          <div class="m-item" style="background-image:url('assets/panel-art/b_slot.png');background-size:100% 100%;border:none;pointer-events:none;opacity:.55"></div>
+          <div class="m-item" style="background-image:url('assets/panel-art/b_slot.png');background-size:100% 100%;border:none;pointer-events:none;opacity:.55"></div>
+          <div class="m-item" style="background-image:url('assets/panel-art/b_slot.png');background-size:100% 100%;border:none;pointer-events:none;opacity:.55"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="sg-section" id="category-tabs">
+      <h2>分類頁籤</h2>
+      <p class="sg-desc">B 皮膚的側欄分類，active 狀態用琥珀漸層點亮。</p>
+      <div class="sg-demo-box" style="background:#f6ecd9;display:flex;gap:8px;width:fit-content">
+        <div class="m-cat active" style="width:auto;flex-direction:row;gap:6px;padding:7px 16px;border-radius:18px"><span class="m-cat-lbl">全部</span></div>
+        <div class="m-cat" style="width:auto;flex-direction:row;gap:6px;padding:7px 16px;border-radius:18px;background:rgba(255,255,255,.35);border:1px solid rgba(120,84,40,.18)"><span class="m-cat-lbl" style="color:rgba(90,64,38,.68)">DONE</span></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="sg-section" id="nug-atom">
+      <h2>NUG · Atom 可靠度 → 視覺確定感</h2>
+      <p class="sg-desc">可靠度不編碼成顏色（顏色留給 Confidence），編碼成線條的實/虛/粗/細。</p>
+      <div style="display:flex;flex-direction:column;gap:14px;max-width:400px">
+        <div><div class="sg-demo-label">定義／限制（最高）</div><div style="height:4px;background:var(--text);border-radius:2px"></div></div>
+        <div><div class="sg-demo-label">因果（中等）</div><div style="height:3px;background:var(--text);border-radius:2px"></div></div>
+        <div><div class="sg-demo-label">相關（中低）</div><div style="height:2px;background:repeating-linear-gradient(90deg,var(--text) 0 8px,transparent 8px 14px)"></div></div>
+        <div><div class="sg-demo-label">經驗法則（較低）</div><div style="height:2px;opacity:.6;background:repeating-linear-gradient(90deg,var(--text) 0 5px,transparent 5px 10px)"></div></div>
+        <div><div class="sg-demo-label">類比（最低）</div><div style="height:1px;opacity:.4;background:repeating-linear-gradient(90deg,var(--text) 0 3px,transparent 3px 7px)"></div></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="sg-section" id="nug-stance">
+      <h2>NUG · Observation 立場</h2>
+      <div class="sg-row">
+        <span style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="width:10px;height:10px;border-radius:50%;background:#4ade80;display:inline-block"></span>支持</span>
+        <span style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="width:10px;height:10px;border-radius:50%;background:#94a3b8;display:inline-block"></span>中立</span>
+        <span style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="width:10px;height:10px;border-radius:50%;background:#f87171;display:inline-block"></span>反對</span>
+      </div>
+      <p class="sg-desc" style="margin-top:10px">中立用中性灰，不用「弱信心」的藍——立場中立跟信心偏弱是兩個不同維度，不可混用（NUG §3）。</p>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="sg-section" id="nug-confidence">
+      <h2>NUG · Confidence 分級</h2>
+      <div class="sg-grid">
+        <div class="sg-card"><div class="sg-swatch" style="background:#4ade80"></div><div class="sg-name">Strong</div><div class="sg-meta">path_confidence ≥ 0.70</div></div>
+        <div class="sg-card"><div class="sg-swatch" style="background:#fbbf24"></div><div class="sg-name">Medium</div><div class="sg-meta">0.40 ≤ x &lt; 0.70</div></div>
+        <div class="sg-card"><div class="sg-swatch" style="background:#60a5fa"></div><div class="sg-name">Weak</div><div class="sg-meta">0.15 ≤ x &lt; 0.40</div></div>
+        <div class="sg-card"><div class="sg-swatch" style="background:#1a1f2e;border-style:dashed"></div><div class="sg-name">Hidden</div><div class="sg-meta">x &lt; 0.15（不顯示）</div></div>
+      </div>
+      <p class="sg-desc" style="margin-top:14px">分級是離散判斷，不是連續漸層——不要用漸層色暗示信心是平滑變化的量（NUG §4）。</p>
+    </section>
+
+  </main>
+</div>
+
+<script>
+// ============================================================
+// 資料驅動渲染：色票／字級／間距／elevation 直接從這裡的 token 表產生，
+// 這份表跟 NDL.md 的表格內容要保持一致——NDL 改了數值，這裡也要跟著改，
+// 這是目前唯一需要手動同步的地方（CSS 變數本身是自動從 hud.css 讀的，
+// 但「這個 token 叫什麼名字、屬於哪一層」這個中繼資料目前只存在這裡）。
+// ============================================================
+const TIER1 = [
+  ['--accent','主強調色'],['--accent2','次強調色'],['--text','主要文字'],
+  ['--muted','次要/停用文字'],['--border','一般邊框'],['--border2','強調邊框'],
+  ['--panel-bg','面板底色'],['--key-bg','熱鍵圓鈕底色'],['--quest-bg','任務欄底色'],
+  ['--overlay-color','全螢幕遮罩'],['--hp-l','HP 漸層起'],['--hp-r','HP 漸層迄'],
+];
+const TIER2 = [
+  ['#E8C873','功能 1（金）'],['#4fc3f7','功能 2（天藍）'],['#f472b6','功能 3（粉紅）'],
+  ['#F5A623','功能 4（橘）'],['#A97FE8','功能 5（紫）'],['#4ECDC4','功能 6（青綠）'],
+  ['#a78bfa','功能 7（淺紫）'],['#94a3b8','系統動作（灰藍）'],
+];
+const TIER3 = [
+  ['#4ade80','正向／完成／強'],['#fbbf24','警示／中等'],['#A97FE8','進行中（例外色）'],
+  ['#60a5fa','弱／資訊性'],['#94a3b8','中性／略過'],['#f87171','負向／失敗／危險'],
+];
+const FONTSCALE = [
+  ['--fs-xs','9px'],['--fs-sm','11px'],['--fs-base','13px'],['--fs-lg','16px'],['--fs-xl','20px'],
+];
+const SPACING = [
+  ['--sp-1','4px'],['--sp-2','8px'],['--sp-3','12px'],['--sp-4','16px'],
+  ['--sp-6','24px'],['--sp-8','32px'],['--sp-12','48px'],
+];
+const ELEVATION = [
+  ['--z-base','0–9','面板內容'],['--z-overlay','10–19','懸浮熱區'],['--z-modal','20–29','Modal'],
+  ['--z-toast','30–39','Toast'],['--z-top','40–49','設定面板'],
+];
+
+function copy(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '已複製'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '複製'; btn.classList.remove('copied'); }, 1200);
+  });
+}
+
+function renderTierGrid(containerId, list, isVar) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = list.map(([token, label]) => {
+    const bg = isVar ? `var(${token})` : token;
+    const copyText = isVar ? token : token;
+    return `<div class="sg-card">
+      <button class="sg-copy" onclick="copy('${copyText}', this)">複製</button>
+      <div class="sg-swatch" style="background:${bg}"></div>
+      <div class="sg-name">${label}</div>
+      <div class="sg-meta">${token}</div>
+    </div>`;
+  }).join('');
+}
+renderTierGrid('sg-tier1', TIER1, true);
+renderTierGrid('sg-tier2', TIER2, false);
+renderTierGrid('sg-tier3', TIER3, false);
+
+document.getElementById('sg-fontscale').innerHTML = FONTSCALE.map(([tok, px]) => `
+  <div class="sg-card">
+    <button class="sg-copy" onclick="copy('${tok}', this)">複製</button>
+    <div style="font-size:${px};margin-bottom:8px">Aa 示例</div>
+    <div class="sg-name">${tok}</div><div class="sg-meta">${px}</div>
+  </div>`).join('');
+
+document.getElementById('sg-spacing').innerHTML = SPACING.map(([tok, px]) => `
+  <div class="sg-row">
+    <span style="width:70px;font-size:11px;color:var(--muted)">${tok}</span>
+    <div class="sg-sp-bar" style="width:${px}"></div>
+    <span style="font-size:11px">${px}</span>
+  </div>`).join('');
+
+document.getElementById('sg-elevation').innerHTML = ELEVATION.map(([tok, range, use], i) => `
+  <div class="sg-elev-box" style="box-shadow:0 ${4+i*8}px ${16+i*14}px rgba(0,0,0,${0.25+i*0.06})">
+    <div style="text-align:center"><div style="color:var(--text);font-size:11px">${tok}</div><div>${range}</div></div>
+  </div>`).join('');
+
+document.getElementById('sg-motion').innerHTML = [
+  ['--motion-fast','120ms'], ['--motion-base','160ms'], ['--motion-slow','200ms'],
+].map(([tok, dur]) => `
+  <div style="text-align:center">
+    <div class="sg-motion-box" style="transition:transform ${dur}" onmouseenter="this.style.transform='scale(1.25)'" onmouseleave="this.style.transform='scale(1)'"></div>
+    <div style="font-size:10px;color:var(--muted);margin-top:6px">${tok} (${dur})</div>
+  </div>`).join('');
+</script>
+</body>
+</html>

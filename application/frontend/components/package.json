@@ -1,0 +1,13 @@
+{
+  "name": "noematica-components",
+  "version": "1.0.0",
+  "description": "Noematica Frontend Component Library — vanilla Web Components，跟現有 hud.css/panel-skins.css 直接相容，不需要建置流程即可在瀏覽器裡以 <script type=\"module\"> 使用。",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test_components.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1"
+  }
+}

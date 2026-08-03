@@ -88,6 +88,13 @@ function openModal(id) {
   $('hkb-' + id)?.classList.add('active');
   $('modal-title').textContent = PANEL_TITLES[id] || id;
 
+  // 面板美術皮膚：目前只有 b／f5 有對應的參考圖（見 panel-skins.css），
+  // 其他面板還沒拿到美術之前維持預設的扁平深色殼，先把上一個面板可能
+  // 留下的皮膚 class 清乾淨，再依 id 決定要不要掛新的。
+  const modalEl = $('modal');
+  modalEl.classList.remove('modal-skin-b', 'modal-skin-h', 'modal-skin-f1', 'modal-skin-f2');
+  if (['b', 'h', 'f1', 'f2'].includes(id)) modalEl.classList.add('modal-skin-' + id);
+
   // 重置詳情欄
   $('m-detail-icon').textContent = '📦';
   $('m-detail-name').textContent = '選擇一個項目';

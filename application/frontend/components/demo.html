@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<title>Noematica Component Library — Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<!-- 這份 demo 特意「不」載入 hud.css 的完整內容，只手動設幾個會用到的 CSS 變數，
+     用來證明：這套元件庫不依賴 hud.css 的任何全域選擇器，只依賴 CSS 自訂屬性
+     （這是 Shadow DOM 唯一會穿透邊界的東西）。放進真實專案時，
+     這些變數會由 hud.css 的 :root 跟 applyTheme() 自動提供，不用重複設定。 -->
+<style>
+  :root {
+    --accent: #E8C873; --text: #f0ead8; --muted: rgba(255,255,255,.4);
+    --border: rgba(232,200,115,.22); --border2: rgba(232,200,115,.6);
+    --panel-bg: rgba(8,14,28,.9); --key-bg: rgba(0,0,0,.48);
+    --fs-xs: 9px; --fs-sm: 11px; --fs-base: 13px; --fs-lg: 16px;
+    --sp-4: 16px; --motion-fast: 120ms;
+  }
+  body { background: #05070c; color: var(--text); font-family: 'JetBrains Mono', monospace; padding: 40px; }
+  h1 { font-size: 18px; margin-bottom: 4px; }
+  .sub { font-size: 11px; color: var(--muted); margin-bottom: 32px; }
+  section { margin-bottom: 40px; }
+  h2 { font-size: 13px; color: var(--accent); margin-bottom: 14px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  code { background: rgba(255,255,255,.06); padding: 1px 6px; border-radius: 4px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<h1>Noematica Component Library</h1>
+<div class="sub">Frontend Component Library demo — 真實資料樣本渲染，不是假資料佔位。</div>
+
+<section>
+  <h2>&lt;activation-badge&gt; — Confidence 分級（NUG §4）</h2>
+  <div class="row">
+    <activation-badge confidence="0.82" show-value></activation-badge>
+    <activation-badge confidence="0.55" show-value></activation-badge>
+    <activation-badge confidence="0.22" show-value></activation-badge>
+    <activation-badge confidence="0.08" show-value></activation-badge>
+    <span style="font-size:11px;color:var(--muted)">← 最後一個是 Hidden（&lt; 0.15），刻意不畫出任何東西，不是空白 bug</span>
+  </div>
+  <div class="row">
+    <activation-badge confidence="0.71" label="fed_funds_rate → bank_net_interest_margin"></activation-badge>
+  </div>
+</section>
+
+<section>
+  <h2>&lt;stance-icon&gt; — Observation 立場（NUG §3）</h2>
+  <div class="row">
+    <stance-icon stance="support" label="2023Q1 觀測"></stance-icon>
+    <stance-icon stance="contradict" label="2023Q2 觀測"></stance-icon>
+    <stance-icon stance="neutral" label="2024Q1 觀測"></stance-icon>
+    <stance-icon stance="__typo__" label="非法值測試"></stance-icon>
+  </div>
+</section>
+
+<section>
+  <h2>&lt;entity-card&gt; — Entity（NUG §1）</h2>
+  <div class="row" style="align-items:flex-start">
+    <entity-card
+      name="fed_funds_rate" type="macro_variable"
+      domains="總經, 貨幣政策"
+      description="美國聯邦基金利率，由 FOMC 決議調整，是最主要的短期利率政策工具。"
+      style="width:280px"></entity-card>
+    <entity-card
+      name="dropout" type="technique"
+      domains="深度學習"
+      description="訓練時隨機丟棄神經元的正則化技巧。"
+      style="width:280px"></entity-card>
+    <entity-card
+      name="???unknown_type_test" type="not_a_real_type"
+      description="測試未知類型的 fallback 圖示。"
+      style="width:280px"></entity-card>
+  </div>
+</section>
+
+<section>
+  <h2>&lt;evidence-card&gt; — Atom + Confidence 疊加（NUG §2 + §5）</h2>
+  <div class="row" style="align-items:flex-start;flex-direction:column">
+    <evidence-card
+      from-name="fed_funds_rate" to-name="bank_net_interest_margin"
+      relation-type="causal" confidence="0.62"
+      style="width:520px">
+      <stance-icon slot="observations" stance="support" label="2023Q1"></stance-icon>
+      <stance-icon slot="observations" stance="contradict" label="2023Q2"></stance-icon>
+      <stance-icon slot="observations" stance="support" label="2024Q1"></stance-icon>
+    </evidence-card>
+
+    <evidence-card
+      from-name="dropout" to-name="overfitting"
+      relation-type="causal" confidence="0.88"
+      style="width:520px"></evidence-card>
+
+    <evidence-card
+      from-name="word2vec" to-name="word_embedding"
+      relation-type="definition" confidence="0.95"
+      style="width:520px"></evidence-card>
+
+    <evidence-card
+      from-name="large_ai_model" to-name="training_stability"
+      relation-type="analogy" confidence="0.35"
+      style="width:520px"></evidence-card>
+    <span style="font-size:10px;color:var(--muted)">↑ 比較上面 causal(2.5px 實線) vs definition(3px 實線) vs analogy(1px 虛線) 的線條粗細差異——這是 NUG §2「可靠度決定視覺確定感，不是顏色」的直接呈現</span>
+  </div>
+</section>
+
+<script type="module">
+  import '../index.js';
+</script>
+</body>
+</html>
