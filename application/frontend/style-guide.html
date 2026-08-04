@@ -79,7 +79,9 @@
     cursor: pointer;
   }
 
-  /* .modal 用 92vw/90vh 這種視窗相對單位，直接塞進風格指南的小預覽框會爆版，
+  /* .modal-skin-b/h/f1/f2 各自有 docs/design-system/NWL.md 規範的固定尺寸
+     （不再是通用 .modal 的 92vw/90vh），但那個尺寸是設計給 hud-main.html
+     全螢幕 HUD 用的，直接塞進風格指南這種小預覽框一樣會被裁切/爆版，
      這裡針對「在 .sg-modal-demo 容器裡」的 .modal 特別覆寫成填滿容器、
      用相對定位而不是絕對定位鋪滿視口——只影響這份風格指南裡的預覽展示，
      不影響 hud-main.html 實際運作時的 .modal 行為（那邊沒有 .sg-modal-demo 這層）。 */
@@ -244,9 +246,12 @@
     <!-- ============================================================ -->
     <section class="sg-section" id="modal-b">
       <h2>Modal — B（模組背包）皮膚</h2>
-      <p class="sg-desc"><code>.modal-skin-b</code>：九宮格外框只切到標題列（頁籤列讓給真實 DOM），道具格用裁出的紋理逐格套用，側欄維持原本左側垂直位置（曾經誤搬成水平列導致版面壞掉，見 NAL 案例）。</p>
+      <p class="sg-desc"><code>.modal-skin-b</code> + <code>.nw-frame</code>：尺寸跟 F3/F4 完全一樣（沒有另外覆寫 width/height）。這裡展示的是 <code>.skin-ready</code> 之後的樣子——面板剛開啟、圖示還沒預載完成時，長得跟 F3/F4 一樣是深色科技風，見 NWL.md §2。四個角落是固定尺寸的獨立裝飾層，不隨響應式變形。道具格是 Grid Layout，維持方格清單，每格套用 b_slot.png。</p>
       <div class="sg-modal-demo">
-        <div class="modal open modal-skin-b">
+        <div class="modal open modal-skin-b nw-frame skin-ready">
+          <div class="nw-corner nw-corner-tl nw-badge"></div>
+          <div class="nw-corner nw-corner-bl"></div>
+          <div class="nw-corner nw-corner-br"></div>
           <div class="modal-header"><span class="modal-title">模組背包</span><button class="modal-close">✕</button></div>
           <div class="modal-body">
             <div class="m-sidebar">
@@ -274,9 +279,12 @@
     <!-- ============================================================ -->
     <section class="sg-section" id="modal-h">
       <h2>Modal — H（AI 小幫手）皮膚</h2>
-      <p class="sg-desc"><code>.modal-skin-h</code>：沒有頁籤列，外框直接含整個標題列＋徽章＋關閉鈕。</p>
+      <p class="sg-desc"><code>.modal-skin-h</code> + <code>.nw-frame</code>：尺寸跟 F3/F4 完全一樣。這裡展示 <code>.skin-ready</code> 之後的樣子——左上角固定顯示 h_badge.png，關閉鈕（沿用 hud.css 原本 header 內的位置）顯示 h_close.png；panel-h.js 是自訂聊天室版面，不套 Grid/List Layout。</p>
       <div class="sg-modal-demo" style="height:340px">
-        <div class="modal open modal-skin-h">
+        <div class="modal open modal-skin-h nw-frame skin-ready">
+          <div class="nw-corner nw-corner-tl nw-badge"></div>
+          <div class="nw-corner nw-corner-bl"></div>
+          <div class="nw-corner nw-corner-br"></div>
           <div class="modal-header"><span class="modal-title">AI 小幫手</span><button class="modal-close">✕</button></div>
           <div class="modal-body">
             <div class="m-sidebar">
@@ -293,9 +301,12 @@
     <!-- ============================================================ -->
     <section class="sg-section" id="modal-f1">
       <h2>Modal — F1（個人日誌）皮膚</h2>
-      <p class="sg-desc"><code>.modal-skin-f1</code>：這次的參考素材是照 NAL 規範預先拆好的個別元件，不是單張合成 mockup，切片座標更乾淨。</p>
+      <p class="sg-desc"><code>.modal-skin-f1</code> + <code>.nw-frame.nw-list</code>：尺寸跟 F3/F4 完全一樣。這裡展示 <code>.skin-ready</code> 之後的樣子——不是挑格子的情境，面板開啟時預設直接進入今天的筆記編輯畫面，筆記清單走單欄橫列、邊緣透明，不是方形卡片；圖示載入完成前跟 F3/F4 一樣是預設方格，見 NWL.md §2。左上角固定顯示 n_badge.png。</p>
       <div class="sg-modal-demo" style="height:340px">
-        <div class="modal open modal-skin-f1">
+        <div class="modal open modal-skin-f1 nw-frame nw-list skin-ready">
+          <div class="nw-corner nw-corner-tl nw-badge"></div>
+          <div class="nw-corner nw-corner-bl"></div>
+          <div class="nw-corner nw-corner-br"></div>
           <div class="modal-header"><span class="modal-title">個人日誌</span><button class="modal-close">✕</button></div>
           <div class="modal-body">
             <div class="m-sidebar">
@@ -318,9 +329,12 @@
     <!-- ============================================================ -->
     <section class="sg-section" id="modal-f2">
       <h2>Modal — F2（協作大廳）皮膚</h2>
-      <p class="sg-desc"><code>.modal-skin-f2</code>：房間狀態徽章刻意不做成圖片，沿用 NDL 語意色，避免變成第三套獨立的狀態色系統。</p>
+      <p class="sg-desc"><code>.modal-skin-f2</code> + <code>.nw-frame.nw-list</code>：尺寸跟 F3/F4 完全一樣。這裡展示 <code>.skin-ready</code> 之後的樣子——commit 紀錄是條列式清單，不用方格，跟 F1 共用同一套單欄橫列、邊緣透明樣式（見 NWL.md §3）。左上角固定顯示 l_badge.png。房間狀態徽章刻意不做成圖片，沿用 NDL 語意色。</p>
       <div class="sg-modal-demo" style="height:340px">
-        <div class="modal open modal-skin-f2">
+        <div class="modal open modal-skin-f2 nw-frame nw-list skin-ready">
+          <div class="nw-corner nw-corner-tl nw-badge"></div>
+          <div class="nw-corner nw-corner-bl"></div>
+          <div class="nw-corner nw-corner-br"></div>
           <div class="modal-header"><span class="modal-title">協作大廳</span><button class="modal-close">✕</button></div>
           <div class="modal-body">
             <div class="m-sidebar">

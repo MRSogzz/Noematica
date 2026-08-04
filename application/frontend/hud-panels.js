@@ -165,7 +165,16 @@ const PANELS = {
       }
     };
 
-    await loadNotes();
+    // 預設直接打開今天的筆記（廣闊寫作背景），沒有的話開一個空白編輯器，
+    // 不讓使用者一開面板就先看到一排選格子的筆記清單——挑選清單只在
+    // 使用者主動點側欄「所有筆記」/「今日」時才出現。
+    await loadNotes(false);
+    const todayNote = notes.find(n => n.filename === defFile);
+    if (todayNote) {
+      await f1Open(defFile);
+    } else {
+      f1SelectCat('new');
+    }
   },
 
   // ── F2: 協作大廳 ──────────────────────────────────────────────────────

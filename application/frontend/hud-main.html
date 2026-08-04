@@ -122,6 +122,18 @@
   <!-- Full-screen Modal -->
   <div class="modal-backdrop" id="backdrop" onclick="closeModal()"></div>
   <div class="modal" id="modal">
+    <!-- 左上／左下／右下三個裝飾角落：固定尺寸、絕對定位，不受 .modal
+         尺寸影響。CSS 預設 display:none，只有 hud-core.js 確認角落圖示
+         （_badge.png/_close.png）預載完成、幫 .modal 掛上 .skin-ready
+         之後才會顯示——面板剛開啟、圖片還沒載完的當下，這幾個 div 完全
+         不會有任何視覺效果，跟 F3/F4 長得一模一樣。左上（nw-badge）：
+         面板徽章圖示，由 --nw-badge-url 這個 CSS 變數決定圖片。右上角
+         沒有另外做 corner div，關閉鈕就是 hud.css 原本在 modal-header
+         裡的 .modal-close，跟 F3/F4 用同一個元件、同一個位置，只有
+         .skin-ready 之後換視覺（顯示圖示），不換位置。 -->
+    <div class="nw-corner nw-corner-tl nw-badge"></div>
+    <div class="nw-corner nw-corner-bl"></div>
+    <div class="nw-corner nw-corner-br"></div>
     <!-- 頂部標題列 -->
     <div class="modal-header">
       <div class="modal-title" id="modal-title">背包</div>

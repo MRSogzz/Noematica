@@ -1,0 +1,44 @@
+{
+  "_deprecated": true,
+  "_deprecatedNote": "這份 metadata 對應的是第二版邊框架構（border-image 九宮格 + round 平鋪），已經被 NWL.md 第三版取代——.modal 的邊框現在是 CSS border-color 模擬，不用這張 frame 圖；角落圖示改用同目錄的 <前綴>_badge.png / <前綴>_close.png，兩者尺寸/顯示方式定義在 panel-skins.css 的 .nw-corner 系統，不需要對應的 JSON。這個檔案保留當歷史紀錄，不是目前的資料來源。",
+  "_comment": "frame metadata for b_frame.png — single source of truth alongside docs/design-system/NWL.md §2 and NAL.md §6. panel-skins.css .modal-skin-b is kept in sync with this file by hand.",
+  "panel": "b",
+  "native": {
+    "width": 328,
+    "height": 388
+  },
+  "slice": {
+    "top": 47,
+    "right": 10,
+    "bottom": 23,
+    "left": 10
+  },
+  "borderImageWidth": {
+    "top": 47,
+    "right": 10,
+    "bottom": 23,
+    "left": 10
+  },
+  "rendered": {
+    "width": "clamp(560px, 46vw, 760px)",
+    "height": "clamp(480px, 68vh, 700px)",
+    "note": "尺寸由 NWL.md §2 依內容需求訂，跟 native 尺寸脫鉤，不是用 native 換算出來的。"
+  },
+  "header": {
+    "height": 47
+  },
+  "anchors": {
+    "close": {
+      "top": "50%",
+      "right": 12,
+      "size": 28
+    }
+  },
+  "bakedDecoration": false,
+  "edgeRepeat": "round",
+  "layoutType": "grid",
+  "layoutHints": {
+    "sidebarWidth": 72,
+    "detailWidth": 240
+  }
+}

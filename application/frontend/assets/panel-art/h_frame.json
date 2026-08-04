@@ -1,0 +1,51 @@
+{
+  "_deprecated": true,
+  "_deprecatedNote": "這份 metadata 對應的是第二版邊框架構（border-image 九宮格 + round 平鋪），已經被 NWL.md 第三版取代——.modal 的邊框現在是 CSS border-color 模擬，不用這張 frame 圖；角落圖示改用同目錄的 <前綴>_badge.png / <前綴>_close.png，兩者尺寸/顯示方式定義在 panel-skins.css 的 .nw-corner 系統，不需要對應的 JSON。這個檔案保留當歷史紀錄，不是目前的資料來源。",
+  "_comment": "frame metadata for h_frame.png — single source of truth alongside docs/design-system/NWL.md §2 and NAL.md §6. panel-skins.css .modal-skin-h is kept in sync with this file by hand.",
+  "panel": "h",
+  "native": {
+    "width": 360,
+    "height": 377
+  },
+  "slice": {
+    "top": 84,
+    "right": 22,
+    "bottom": 23,
+    "left": 16
+  },
+  "borderImageWidth": {
+    "top": 84,
+    "right": 22,
+    "bottom": 23,
+    "left": 16
+  },
+  "rendered": {
+    "width": "clamp(400px, 32vw, 520px)",
+    "height": "clamp(440px, 62vh, 640px)",
+    "note": "尺寸由 NWL.md §2 依內容需求訂（自訂聊天室版面，不用三欄骨架），跟 native 尺寸脫鉤。"
+  },
+  "header": {
+    "height": 84
+  },
+  "anchors": {
+    "close": {
+      "top": "50%",
+      "right": 20,
+      "size": 28
+    },
+    "badge": {
+      "slot": "Header.Left",
+      "asset": "h_badge.png",
+      "enabled": false,
+      "enableClass": "badge-unbaked"
+    }
+  },
+  "bakedDecoration": true,
+  "bakedDecorationNote": "頂部邊條中間烤了一個獨特徽章／裝飾，是不可平鋪的獨特圖案，違反 NAL.md §6.1 的邊條規格。修法見 NAL.md §6.3：把徽章從邊條裡移除、該位置改畫成跟左右一致的可平鋪材質，徽章改用這裡 anchors.badge 指到的獨立圖層（h_badge.png，已存在）搭配 .h-badge-anchor 顯示。",
+  "edgeRepeat": "stretch",
+  "edgeRepeatNote": "暫時值，等 bakedDecoration 修掉（見上）之後改成 round，並把 anchors.badge.enabled 改成 true、CSS 上啟用 .modal-skin-h.badge-unbaked。",
+  "layoutType": "chat",
+  "layoutHints": {
+    "usesGridSkeleton": false
+  }
+}

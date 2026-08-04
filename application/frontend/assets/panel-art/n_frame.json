@@ -1,0 +1,54 @@
+{
+  "_deprecated": true,
+  "_deprecatedNote": "這份 metadata 對應的是第二版邊框架構（border-image 九宮格 + round 平鋪），已經被 NWL.md 第三版取代——.modal 的邊框現在是 CSS border-color 模擬，不用這張 frame 圖；角落圖示改用同目錄的 <前綴>_badge.png / <前綴>_close.png，兩者尺寸/顯示方式定義在 panel-skins.css 的 .nw-corner 系統，不需要對應的 JSON。這個檔案保留當歷史紀錄，不是目前的資料來源。",
+  "_comment": "frame metadata for n_frame.png — single source of truth alongside docs/design-system/NWL.md §2 and NAL.md §6. panel-skins.css .modal-skin-f1 is kept in sync with this file by hand.",
+  "panel": "f1",
+  "assetPrefix": "n",
+  "native": {
+    "width": 346,
+    "height": 304
+  },
+  "slice": {
+    "top": 40,
+    "right": 27,
+    "bottom": 21,
+    "left": 26
+  },
+  "borderImageWidth": {
+    "top": 40,
+    "right": 27,
+    "bottom": 21,
+    "left": 26
+  },
+  "rendered": {
+    "width": "clamp(680px, 58vw, 960px)",
+    "height": "clamp(560px, 76vh, 780px)",
+    "note": "尺寸由 NWL.md §2 依內容需求訂，跟 native 尺寸脫鉤。F1 用 Reader Layout（見 layoutType），中間需要大面積閱讀/編輯區，所以尺寸比 Grid Layout 面板更寬。"
+  },
+  "header": {
+    "height": 40
+  },
+  "anchors": {
+    "close": {
+      "top": "50%",
+      "right": 10,
+      "size": 24
+    },
+    "badge": {
+      "slot": "Header.Left",
+      "asset": "n_badge.png",
+      "enabled": false,
+      "enableClass": "badge-unbaked"
+    }
+  },
+  "bakedDecoration": true,
+  "bakedDecorationNote": "頂部邊條中間烤了一個獨特徽章，違反 NAL.md §6.1 的邊條規格，修法同 h_frame.json（見 NAL.md §6.3），徽章改用 n_badge.png（已存在，保留備用）搭配 anchor 顯示。",
+  "edgeRepeat": "stretch",
+  "edgeRepeatNote": "暫時值，等 bakedDecoration 修掉之後改成 round。",
+  "layoutType": "reader",
+  "layoutTypeNote": "個人日誌面板：核心是寫筆記，不是挑格子。中間內容區預設直接顯示今天的筆記編輯器（大面積 textarea），不是先顯示一排筆記卡片；筆記清單只在使用者主動點側欄「所有筆記」時才出現，且是單欄橫列清單，不是方形圖示格。詳見 NWL.md §3、hud-panels.js 的 f1()。",
+  "layoutHints": {
+    "sidebarWidth": 64,
+    "detailWidth": 220
+  }
+}
