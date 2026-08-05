@@ -523,7 +523,7 @@ const PANELS = {
         const r   = await api('/api/validate/pipeline', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ids }),
+          body: JSON.stringify({ moduleIds: ids }),
         });
         pipelineResult = r;
         doRenderMods(currentFilter, r);
