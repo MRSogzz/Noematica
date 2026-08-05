@@ -88,13 +88,12 @@ function openModal(id) {
   $('hkb-' + id)?.classList.add('active');
   $('modal-title').textContent = PANEL_TITLES[id] || id;
 
-  // 面板美術皮膚：目前只有 b/h/f1/f2 有對應的參考圖（見 panel-skins.css），
-  // 其他面板還沒拿到美術之前維持預設的扁平深色殼，先把上一個面板可能
-  // 留下的皮膚 class 清乾淨，再依 id 決定要不要掛新的。nw-frame 是四個
-  // 皮膚共用的元件 class（見 NWL.md），跟 modal-skin-<id> 一起切換，
-  // 兩者都只在 b/h/f1/f2 時掛上，確保 F3/F4 等其他面板的底色/版面/
-  // 尺寸完全不受這套皮膚影響——三者用的是 hud.css 同一份 .modal 基礎
-  // 樣式（92vw/90vh、深色科技風），這份檔案自始至終都沒有覆寫過尺寸。
+  // 面板美術皮膚：見 panel-skins.css，先把上一個面板可能留下的皮膚
+  // class 清乾淨，再依 id 決定要不要掛新的。nw-frame 是這幾個皮膚共用的
+  // 元件 class（見 NWL.md），跟 modal-skin-<id> 一起切換，兩者都只在
+  // b/h/f1/f2/f3/f4/f5 時掛上，確保 M 等其他面板的底色/版面/尺寸完全
+  // 不受這套皮膚影響——這些面板用的是 hud.css 同一份 .modal 基礎樣式
+  // （92vw/90vh、深色科技風），這份檔案自始至終都沒有覆寫過尺寸。
   //
   // 這幾個 class 只負責標記「這是哪個面板、走 Grid 還是 List」，不代表
   // 皮膚外觀就會生效——外觀是否套用完全由 <html> 上有沒有
@@ -103,7 +102,7 @@ function openModal(id) {
   // .nw-skins-enabled 只有在目前套用的 theme.json 明確定義了
   // panelSkins.enabled === true 時才會被 hud-utils.js 的 applyTheme()
   // 加上去（見該檔案）。沒有套用這種主題（例如目前預設的 default 主題）
-  // 就完全不會有 .nw-skins-enabled，B/H/F1/F2 開啟時會跟 F3/F4 一樣是
+  // 就完全不會有 .nw-skins-enabled，B/H/F1/F2/F3/F4/F5 開啟時會跟 M 一樣是
   // 純粹的深色科技風，不是「圖片有沒有載入完成」在決定要不要換色，是
   // 「有沒有套用定義了這個功能的風格」在決定——這是跟第四版
   // （image-preload + skin-ready）的差異，那一版因為角落圖示是固定
@@ -111,14 +110,16 @@ function openModal(id) {
   // 風格都強制換色」，不符合「風格沒套用就該是原本樣子」的需求，這版
   // 改成真正掛勾到主題系統。
   const modalEl = $('modal');
-  modalEl.classList.remove('modal-skin-b', 'modal-skin-h', 'modal-skin-f1', 'modal-skin-f2', 'nw-frame', 'nw-list');
-  const isSkinned = ['b', 'h', 'f1', 'f2'].includes(id);
+  modalEl.classList.remove('modal-skin-b', 'modal-skin-h', 'modal-skin-f1', 'modal-skin-f2', 'modal-skin-f3', 'modal-skin-f4', 'modal-skin-f5', 'nw-frame', 'nw-list');
+  const isSkinned = ['b', 'h', 'f1', 'f2', 'f3', 'f4', 'f5'].includes(id);
   if (isSkinned) {
     modalEl.classList.add('modal-skin-' + id, 'nw-frame');
-    // F1/F2 是條列式清單（筆記/commit 紀錄），不是挑格子的情境，額外
-    // 掛 .nw-list 啟用單欄橫列清單樣式（同樣只有 .nw-skins-enabled 時
-    // 才生效）；B 是背包道具，維持方格清單，不掛這個 class。
-    if (id === 'f1' || id === 'f2') modalEl.classList.add('nw-list');
+    // F1/F2/F5 是條列式清單（筆記/commit 紀錄/文件搜尋結果），不是挑
+    // 格子的情境，額外掛 .nw-list 啟用單欄橫列清單樣式（同樣只有
+    // .nw-skins-enabled 時才生效）；B/F4 是方格清單（道具／里程碑卡），
+    // F3 是整個 iframe 塞滿內容區（見下面 fullwidth 判斷），三者都不掛
+    // 這個 class。
+    if (id === 'f1' || id === 'f2' || id === 'f5') modalEl.classList.add('nw-list');
   }
 
   // 重置詳情欄

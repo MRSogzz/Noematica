@@ -3,16 +3,16 @@
    ============================================================
    每個面板開啟後共用同一個 .modal 殼（見 hud.css 的 .modal / .modal-header /
    .m-sidebar / .m-toolbar / .m-grid-wrap / .m-detail）。這份檔案讓
-   B/H/F1/F2 四個面板可以套用對應的美術配色跟角落圖示，但完全不動
-   hud-panels.js 裡的真實功能邏輯，也不動 .modal 的尺寸——跟 F3/F4 用
+   B/H/F1/F2/F3/F4/F5 七個面板可以套用對應的美術配色跟角落圖示，但完全不動
+   hud-panels.js 裡的真實功能邏輯，也不動 .modal 的尺寸——跟 M 用
    同一個 92vw/90vh（見 hud.css .modal）。
 
    ============================================================
    核心原則：外觀是否套用，由「目前套用的風格」決定，不是強制的
    ============================================================
-   1. **尺寸永遠跟 F3/F4 一樣**：這份檔案完全不覆寫 .modal 的
-      width/height，B/H/F1/F2 開啟時就是 hud.css 定義的 92vw/90vh
-      （max 1300×860），跟 F3/F4 同一個標準，不會有些面板大有些面板小。
+   1. **尺寸永遠跟 M 一樣**：這份檔案完全不覆寫 .modal 的
+      width/height，B/H/F1/F2/F3/F4/F5 開啟時就是 hud.css 定義的 92vw/90vh
+      （max 1300×860），跟 M 同一個標準，不會有些面板大有些面板小。
 
    2. **顏色/圖片只在套用了對應的風格時才生效，不是打開面板就強制換**：
       這份檔案裡幾乎所有跟顏色/圖片有關的規則都掛在 `html.nw-skins-enabled`
@@ -21,8 +21,8 @@
       `applyTheme(theme.json)`——如果目前套用的 theme.json 有
       `panelSkins.enabled === true`，才會幫 `<html>` 掛上這個 class；
       沒有這個欄位（目前內建的 default／gamification／cyber 三個主題都
-      沒有）就完全不會掛，B/H/F1/F2 開啟時會維持 `.modal-skin-<id>`/
-      `.nw-frame` 這幾個結構用的 class，但視覺上長得跟 F3/F4 一模一樣
+      沒有）就完全不會掛，B/H/F1/F2/F3/F4/F5 開啟時會維持 `.modal-skin-<id>`/
+      `.nw-frame` 這幾個結構用的 class，但視覺上長得跟 M 一模一樣
       （深色科技風、標題正常顯示、關閉鈕是預設圓形按鈕、方格清單是
       預設深色卡片），因為所有改外觀的規則都因為 `html.nw-skins-enabled`
       不存在而不生效。
@@ -31,7 +31,7 @@
       載入完成後幫 `.modal` 掛 `.skin-ready`」的機制——那個機制的問題是
       角落圖示是固定 bundled 在 repo 裡的檔案，瀏覽器幾乎瞬間就能載入
       完成，實際體驗上等於「不管有沒有套用風格，顏色都會立刻強制换掉」，
-      不符合「沒套用風格就該維持 F3/F4 原本樣子」的需求。現在改成掛勾
+      不符合「沒套用風格就該維持 M 原本樣子」的需求。現在改成掛勾
       到真正的主題系統（跟 key 圖示／頭像／背景圖套用邏輯是同一條路徑），
       「有沒有套用風格」有一個明確、跟圖片載入時間無關的判斷依據。
 
@@ -40,7 +40,7 @@
       `.nw-corner` 元素，預設 `display:none`，只有 `html.nw-skins-enabled`
       時才顯示——本來就不佔版面空間，不管有沒有套用風格，都不會讓旁邊的
       標題／內容跟著跑位。右上的關閉鈕沿用 hud.css 原本在 header 裡的
-      `.modal-close`（跟 F3/F4 用同一個元件、同一個位置），套用風格後
+      `.modal-close`（跟 M 用同一個元件、同一個位置），套用風格後
       只換視覺（改成顯示圖示），不換位置。
 
    側欄一律維持原本在左邊、垂直排列的版面結構，不搬動位置（曾經把 B 的
@@ -48,11 +48,14 @@
    擠成一坨，這是明確教訓）。
 
    內容版面（Layout Type，見 docs/design-system/NWL.md §5）：
-     - B：Grid Layout（跟 F3/F4 預設一樣，套用風格後只是換成 b_slot.png
-       當格子底圖，不換版面結構）。
-     - F1／F2：套用風格後改成單欄清單、邊緣透明（見 .nw-list），沒套用
-       風格時跟 F3/F4 一樣是預設方格。
+     - B／F4：Grid Layout（跟 M 預設一樣，B 套用風格後換成 b_slot.png
+       當格子底圖；F4 里程碑卡沒有專屬底圖，只重新上色，不換版面結構）。
+     - F1／F2／F5：套用風格後改成單欄清單、邊緣透明（見 .nw-list），
+       沒套用風格時跟 M 一樣是預設方格。F1 面板開啟時預設直接進入今天
+       的筆記編輯畫面（見 hud-panels.js 的 f1()）。
      - H：panel-h.js 是完全自訂的聊天室版面，不套用上面兩種骨架。
+     - F3：內容整個是 panel-tests.html 的 iframe（fullwidth 模式），
+       不套用 Grid/List Layout，只有外層邊框/角落/標題列套用皮膚。
 
    文字顏色統一用 rgb(45,30,27)（咖啡色），只在套用了風格之後套用，
    透過覆寫全域 --text 變數傳到 inline style="color:var(--text)" 的地方
@@ -61,12 +64,10 @@
 
 /* ── NW 共用邊框元件（B/H/F1/F2 四個皮膚共用；.nw-corner 系列一律
    display:none，只有 html.nw-skins-enabled 時才顯示，見上方核心原則 2/3）──── */
-（B/H/F1/F2 四個皮膚共用；.nw-corner 系列一律
-   display:none，只有 html.nw-skins-enabled 時才顯示，見上方核心原則 2/3）──── */
 .modal.nw-frame {
   --nw-trim-top: #2c5c8f;
   --nw-trim-side: #c9a86a;
-  --nw-corner-size: 44px;
+  --nw-corner-size: 75px;
   --nw-text: rgb(45, 30, 27);
 }
 
@@ -95,9 +96,9 @@ html.nw-skins-enabled .modal.nw-frame .nw-badge {
   background-size: 60%; background-position: center; background-repeat: no-repeat;
 }
 
-/* .modal 本體：載入完成前完全不覆寫，長得跟 F3/F4 一樣（深色底、
+/* .modal 本體：載入完成前完全不覆寫，長得跟 M 一樣（深色底、
    hud.css 預設的 border）；載入完成後才換成邊框色 + 底色 + 文字色。
-   尺寸（width/height）自始至終都沒有被覆寫，永遠跟 F3/F4 同一個
+   尺寸（width/height）自始至終都沒有被覆寫，永遠跟 M 同一個
    92vw/90vh 標準。 */
 html.nw-skins-enabled .modal.nw-frame {
   background: var(--nw-body, #f5ecd9);
@@ -108,7 +109,7 @@ html.nw-skins-enabled .modal.nw-frame {
 html.nw-skins-enabled .modal.nw-frame .modal-body { background: transparent; }
 
 /* 標題列：載入完成前跟 hud.css 預設一樣（深色 header、標題正常顯示、
-   置中、大小跟 F3/F4 相同），不會有「標題太小」的問題，因為根本沒有
+   置中、大小跟 M 相同），不會有「標題太小」的問題，因為根本沒有
    另外覆寫過標題樣式。載入完成後只換底色跟文字色，位置/大小不變。 */
 html.nw-skins-enabled .modal.nw-frame .modal-header {
   background: rgba(255,255,255,0.25);
@@ -116,7 +117,7 @@ html.nw-skins-enabled .modal.nw-frame .modal-header {
 }
 html.nw-skins-enabled .modal.nw-frame .modal-title { color: var(--nw-text); }
 
-/* 關閉鈕：沿用 hud.css 裡原本在 header 內的 .modal-close（跟 F3/F4
+/* 關閉鈕：沿用 hud.css 裡原本在 header 內的 .modal-close（跟 M
    同一個元件、同一個位置——margin-left:auto 讓它自然貼齊 header 右側），
    載入完成前维持預設圓形按鈕＋「✕」文字；載入完成後只換視覺（改成
    顯示 --nw-close-url 這張圖），完全不改位置。 */
@@ -129,7 +130,7 @@ html.nw-skins-enabled .modal.nw-frame .modal-close {
 html.nw-skins-enabled .modal.nw-frame .modal-close:hover { filter: brightness(1.12); background-color: transparent; }
 
 /* 清單樣式（F1/F2，靠 .nw-list 這個標記 class 啟用）：載入完成前跟
-   F3/F4 一樣是預設方格清單，載入完成後才換成單欄橫列、邊緣透明——
+   M 一樣是預設方格清單，載入完成後才換成單欄橫列、邊緣透明——
    跟「條列式清單」「寫筆記」的情境比較搭。B 沒有 .nw-list，維持方格。 */
 html.nw-skins-enabled .modal.nw-frame.nw-list .m-item-grid {
   display: flex; flex-direction: column; gap: 2px;
@@ -173,7 +174,7 @@ html.nw-skins-enabled .modal.modal-skin-b .m-search {
 }
 html.nw-skins-enabled .modal.modal-skin-b .m-search::placeholder { color: rgba(45,30,27,0.4); }
 
-/* 背包是 Grid Layout：載入完成前是預設深色方格（跟 F3/F4 一樣），
+/* 背包是 Grid Layout：載入完成前是預設深色方格（跟 M 一樣），
    載入完成後每個 item 換成 b_slot.png 當格子底圖，版面結構不變。 */
 html.nw-skins-enabled .modal.modal-skin-b .m-item {
   background-image: url('assets/panel-art/b_slot.png');
@@ -202,7 +203,7 @@ html.nw-skins-enabled .modal.modal-skin-b .b-btn-clear:hover { filter: brightnes
 
 /* ── H：AI 知識整理小幫手 ───────────────────────────────────────────
    panel-h.js 是完全自訂版面（聊天室 UI），不套用 Grid/List Layout，
-   維持原樣，只套用 NW 邊框（載入完成前跟 F3/F4 一樣）。 ──────────── */
+   維持原樣，只套用 NW 邊框（載入完成前跟 M 一樣）。 ──────────── */
 .modal.modal-skin-h {
   --nw-body: var(--nw-body-h, #f7ecd6);
   --nw-badge-url: var(--nw-badge-url-h, url('assets/panel-art/h_badge.png'));
@@ -343,3 +344,99 @@ html.nw-skins-enabled .modal.modal-skin-f2 .m-detail-desc { color: rgba(45,30,27
 .modal.modal-skin-f2 .l-icon-people { background-image: url('assets/panel-art/l_icon_people.png'); }
 .modal.modal-skin-f2 .l-icon-lock   { background-image: url('assets/panel-art/l_icon_lock.png'); }
 .modal.modal-skin-f2 .l-icon-map    { background-image: url('assets/panel-art/l_icon_map.png'); }
+
+
+/* ── T：測試套件監控（F3 鍵，內容整個是 panel-tests.html 的 iframe，
+   fullwidth 模式，見 hud-core.js openModal() 的 id==='f3' 分支）───── */
+/* 這個面板沒有實際美術素材（t_badge.png／t_close.png 目前不存在，見
+   NAL.md §7），先把架構接好——套用了定義 panelSkins 的風格時，角落跟
+   邊框一樣會套用（如果對應圖片不存在，角落只是顯示空白，不影響版面，
+   見 NWL.md §2），等素材補齊直接把路徑換掉即可，不用改這裡的規則。
+   內容區是整塊 iframe，不套用 Grid/List Layout，也不需要 .m-item 相關
+   的顏色覆寫。 */
+.modal.modal-skin-f3 {
+  --nw-body: var(--nw-body-f3, #eef1f5);
+  --nw-badge-url: var(--nw-badge-url-f3, url('assets/panel-art/t_badge.png'));
+  --nw-close-url: var(--nw-close-url-f3, url('assets/panel-art/t_close.png'));
+}
+
+
+/* ── P：目標專案時程（F4 鍵，里程碑卡片，Grid Layout）──────────────── */
+/* 同樣還沒有實際美術素材（p_badge.png／p_close.png，見 NAL.md §7）。
+   里程碑卡片沒有專屬的格子底圖（不像 B 有 b_slot.png），沒套用風格時
+   跟 hud.css 預設的深色卡片一樣（M 也是同一套），套用後只重新上色，不換版面。 */
+.modal.modal-skin-f4 {
+  --nw-body: var(--nw-body-f4, #f5ecd9);
+  --nw-badge-url: var(--nw-badge-url-f4, url('assets/panel-art/p_badge.png'));
+  --nw-close-url: var(--nw-close-url-f4, url('assets/panel-art/p_close.png'));
+}
+
+html.nw-skins-enabled .modal.modal-skin-f4 .m-cat { background: rgba(255,255,255,0.35); border: 1px solid rgba(120,84,40,0.18); }
+html.nw-skins-enabled .modal.modal-skin-f4 .m-cat:hover { background: rgba(255,255,255,0.55); }
+html.nw-skins-enabled .modal.modal-skin-f4 .m-cat.active {
+  background: linear-gradient(180deg, #f0b545, #d98a1f);
+  border-color: #a5661c; box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+html.nw-skins-enabled .modal.modal-skin-f4 .m-cat-lbl { color: rgba(45,30,27,0.68); }
+html.nw-skins-enabled .modal.modal-skin-f4 .m-cat.active .m-cat-lbl { color: rgb(45,30,27); font-weight: 700; }
+
+html.nw-skins-enabled .modal.modal-skin-f4 .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
+html.nw-skins-enabled .modal.modal-skin-f4 .m-search { background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.25); color: rgb(45,30,27); }
+html.nw-skins-enabled .modal.modal-skin-f4 .m-search::placeholder { color: rgba(45,30,27,0.4); }
+
+/* 里程碑卡片：沒有底圖素材，用跟 H 一樣的做法（淺色卡片 + 邊框），
+   不是方形 icon 格，卡片內文字（進度％／任務數）是 hud-panels.js 用
+   inline style="color:var(--text)" 寫的，會透過 --text 變數統一吃到
+   咖啡色（見 hud-utils.js 的 applyTheme()），這裡不用逐一覆寫。 */
+html.nw-skins-enabled .modal.modal-skin-f4 .m-item {
+  background: rgba(255,255,255,0.45); border-color: rgba(120,84,40,0.18);
+}
+html.nw-skins-enabled .modal.modal-skin-f4 .m-item:hover {
+  border-color: rgba(196,140,60,0.5); background: rgba(255,255,255,0.7);
+}
+html.nw-skins-enabled .modal.modal-skin-f4 .m-item-name { color: rgb(45,30,27) !important; }
+
+html.nw-skins-enabled .modal.modal-skin-f4 .m-detail { background: rgba(255,255,255,0.4); border-left: 1px solid rgba(120,84,40,0.15); }
+html.nw-skins-enabled .modal.modal-skin-f4 .m-detail-name { color: rgb(45,30,27); }
+html.nw-skins-enabled .modal.modal-skin-f4 .m-attr-text { color: rgb(45,30,27); }
+html.nw-skins-enabled .modal.modal-skin-f4 .m-detail-desc { color: rgba(45,30,27,0.75); }
+
+
+/* ── W：知識圖鑑（F5 鍵，文件搜尋結果，List Layout）─────────────────── */
+/* 同樣還沒有實際美術素材（w_badge.png／w_close.png，見 NAL.md §7）。
+   hud-panels.js 的 f5() 目前是直接用 inline style 排成 flex row（跟
+   F2 commit 清單同一個做法，不是走 .m-item-grid），所以跟 F2 一樣直接
+   覆寫 .m-item，不是靠共用的 .nw-list .m-item-grid .m-item 規則（那組
+   規則需要 .m-item-grid 這層容器才會生效，這裡沒有）。 */
+.modal.modal-skin-f5 {
+  --nw-body: var(--nw-body-f5, #f2ede0);
+  --nw-badge-url: var(--nw-badge-url-f5, url('assets/panel-art/w_badge.png'));
+  --nw-close-url: var(--nw-close-url-f5, url('assets/panel-art/w_close.png'));
+}
+
+html.nw-skins-enabled .modal.modal-skin-f5 .m-cat { background: rgba(255,255,255,0.35); border: 1px solid rgba(120,84,40,0.18); }
+html.nw-skins-enabled .modal.modal-skin-f5 .m-cat:hover { background: rgba(255,255,255,0.55); }
+html.nw-skins-enabled .modal.modal-skin-f5 .m-cat.active {
+  background: rgba(59,104,148,0.15); border-color: #3b6894; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+html.nw-skins-enabled .modal.modal-skin-f5 .m-cat-lbl { color: rgba(45,30,27,0.68); }
+html.nw-skins-enabled .modal.modal-skin-f5 .m-cat.active .m-cat-lbl { color: #2c5a86; font-weight: 700; }
+
+html.nw-skins-enabled .modal.modal-skin-f5 .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
+html.nw-skins-enabled .modal.modal-skin-f5 .m-search { background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.25); color: rgb(45,30,27); }
+html.nw-skins-enabled .modal.modal-skin-f5 .m-search::placeholder { color: rgba(45,30,27,0.4); }
+
+/* 文件清單：一條一條的搜尋結果，不用方格——蓋掉 hud.css 給 .m-item
+   預設的卡片背景/邊框，改成邊緣透明、只留一條底部分隔線，跟 F2 同一套
+   做法。 */
+html.nw-skins-enabled .modal.modal-skin-f5 .m-item {
+  background: transparent !important; border: none !important;
+  border-bottom: 1px solid rgba(120,84,40,0.12) !important;
+}
+html.nw-skins-enabled .modal.modal-skin-f5 .m-item:hover { background: rgba(59,104,148,0.06) !important; }
+html.nw-skins-enabled .modal.modal-skin-f5 .m-item-name { color: rgb(45,30,27) !important; }
+
+html.nw-skins-enabled .modal.modal-skin-f5 .m-detail { background: rgba(255,255,255,0.4); border-left: 1px solid rgba(120,84,40,0.15); }
+html.nw-skins-enabled .modal.modal-skin-f5 .m-detail-name { color: rgb(45,30,27); }
+html.nw-skins-enabled .modal.modal-skin-f5 .m-attr-text { color: rgb(45,30,27); }
+html.nw-skins-enabled .modal.modal-skin-f5 .m-detail-desc { color: rgba(45,30,27,0.75); }

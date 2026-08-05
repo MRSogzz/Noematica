@@ -1,10 +1,10 @@
 ---
-uid: large_ai_model_definition_inference_phase
-from: large_ai_model
-to: inference_phase
+uid: cross_entropy_loss_definition_prediction_error
+from: cross_entropy_loss
+to: prediction_error
 type: definition
 abstraction:
-  level: 1
+  level: 2
   jump_allowed: false
 status: active
 lifecycle:
@@ -20,14 +20,14 @@ created: '2026-07-27'
 
 ## 機制說明
 
-推理階段是LLM應用所學進行生成的過程。
+交叉熵損失函數是衡量預測誤差的具體指標。
 
 ## 已知限制 / 適用邊界
 
-僅指模型應用所學進行生成的過程，不包含訓練過程。
+當損失值越大時，預測誤差越大。
 
 ## 抽取來源
 
 由 note_extractor 從筆記「LLM注意力機制」自動抽取，待審查。
-LLM 判讀理由：筆記明確指出LLM的運作可分為推理階段，且推理階段是模型應用所學進行生成的過程。
+LLM 判讀理由：筆記明確說明損失值越大，代表預測越離譜（即預測誤差越大）。
 

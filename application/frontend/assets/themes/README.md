@@ -77,7 +77,10 @@ assets/themes/
       "b":  { "body": "背包內容區底色", "badge": "左上角落圖示路徑", "close": "關閉鈕圖示路徑" },
       "h":  { "body": "...", "badge": "...", "close": "..." },
       "f1": { "body": "...", "badge": "...", "close": "..." },
-      "f2": { "body": "...", "badge": "...", "close": "..." }
+      "f2": { "body": "...", "badge": "...", "close": "..." },
+      "f3": { "body": "...", "badge": "...", "close": "..." },
+      "f4": { "body": "...", "badge": "...", "close": "..." },
+      "f5": { "body": "...", "badge": "...", "close": "..." }
     }
   }
 }

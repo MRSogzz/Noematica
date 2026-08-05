@@ -542,6 +542,72 @@
       "target": "（保留備用，訊息泡泡目前是純色背景）",
       "status": "reserved",
       "confidence": "high"
+    },
+    {
+      "file": "panel-art/t_badge.png",
+      "panel": "f3",
+      "element": "badge",
+      "dimensions": null,
+      "type": "icon",
+      "target": "NW 角落元件左上（.nw-badge，見 panel-skins.css .modal-skin-f3 / NWL.md §3.2）",
+      "status": "missing",
+      "confidence": null,
+      "note": "還沒有實際檔案，架構已接好（見 NAL.md §7），等圖到位直接放進這個路徑即可"
+    },
+    {
+      "file": "panel-art/t_close.png",
+      "panel": "f3",
+      "element": "close",
+      "dimensions": null,
+      "type": "icon",
+      "target": "NW 角落元件右上（.modal-close，見 panel-skins.css .modal-skin-f3 / NWL.md §3.2）",
+      "status": "missing",
+      "confidence": null,
+      "note": "同上"
+    },
+    {
+      "file": "panel-art/p_badge.png",
+      "panel": "f4",
+      "element": "badge",
+      "dimensions": null,
+      "type": "icon",
+      "target": "NW 角落元件左上（.nw-badge，見 panel-skins.css .modal-skin-f4 / NWL.md §3.2）",
+      "status": "missing",
+      "confidence": null,
+      "note": "還沒有實際檔案，架構已接好（見 NAL.md §7），等圖到位直接放進這個路徑即可"
+    },
+    {
+      "file": "panel-art/p_close.png",
+      "panel": "f4",
+      "element": "close",
+      "dimensions": null,
+      "type": "icon",
+      "target": "NW 角落元件右上（.modal-close，見 panel-skins.css .modal-skin-f4 / NWL.md §3.2）",
+      "status": "missing",
+      "confidence": null,
+      "note": "同上"
+    },
+    {
+      "file": "panel-art/w_badge.png",
+      "panel": "f5",
+      "element": "badge",
+      "dimensions": null,
+      "type": "icon",
+      "target": "NW 角落元件左上（.nw-badge，見 panel-skins.css .modal-skin-f5 / NWL.md §3.2）",
+      "status": "missing",
+      "confidence": null,
+      "note": "還沒有實際檔案，架構已接好（見 NAL.md §7），等圖到位直接放進這個路徑即可"
+    },
+    {
+      "file": "panel-art/w_close.png",
+      "panel": "f5",
+      "element": "close",
+      "dimensions": null,
+      "type": "icon",
+      "target": "NW 角落元件右上（.modal-close，見 panel-skins.css .modal-skin-f5 / NWL.md §3.2）",
+      "status": "missing",
+      "confidence": null,
+      "note": "同上"
     }
   ],
   "themes": [
@@ -572,6 +638,7 @@
     "【已修正・第二輪】第一輪修法（等比例縮放 k）雖然解決了拉伸變形，但版面尺寸還是被素材長寬比綁死、也不是真正響應式，等於還是讓版面遷就圖片。第二輪改成 NWL.md 定義的做法：.modal-skin-* 尺寸直接用 clamp() 響應式單位訂（跟素材原生尺寸完全脫鉤），border-image-width 是獨立固定的邊框厚度設計值（不隨視窗尺寸變化），邊條用 border-image-repeat: round 平鋪填滿任意寬高。b_frame/l_frame 邊條本身沒有烤入獨特裝飾，已經可以直接用 round；h_frame/n_frame 頂部邊條烤有徽章，暫時維持 stretch，規格見 NAL.md §6，圖片改完拆掉徽章之後再切換成 round（前端這邊已經接好對應的獨立徽章 anchor，見 h_frame.json/n_frame.json 的 anchors.badge）。另外 F1（個人日誌）原本套用跟 B 一樣的三欄格狀清單骨架，不符合「筆記該是廣闊書寫背景」的原始設計意圖，改成 Reader Layout：面板開啟時預設直接進入今天的筆記編輯畫面，筆記清單只在使用者主動瀏覽時才出現、且改成單欄清單而非方格卡片，詳見 NWL.md §3。",
     "【已修正・第三輪】前兩輪都還是用 border-image 九宮格貼一整張 frame 圖當邊框，第二輪雖然改成響應式 + round 平鋪，但沒辦法滿足「四個角落各自獨立、左上右上要放不同功能圖示」的需求（border-image 的四角本來就是切自同一張來源圖）。第三輪整個換掉：邊框改成兩個獨立機制——邊條直接用 CSS border-color 模擬（不用圖片，天生響應式安全），四個角落是絕對定位、固定 px 尺寸的獨立圖層，跟 .modal 尺寸完全無關，不會被響應式縮放影響。左上角落顯示各面板的 _badge.png（原本 reserved，這輪起改成 active），右上角落顯示 _close.png（同樣原本 reserved 改成 active），左下/右下是純 CSS 畫的裝飾邊角，不用圖片。b/h/n/l 四張 frame.png 九宮格外框圖檔案還在，但 CSS 已經不再引用，見 NAL.md §6.3。另外 F1/F2 從方格清單改成單欄橫列、邊緣透明的 List Layout（跟 B 的 Grid Layout 分開），文字顏色統一改成 rgb(45,30,27)。詳見 NWL.md（已第三次重寫）。",
     "【已修正・第四輪】第三輪雖然把角落跟邊條分開了，但尺寸還是這份文件自己訂的一套 clamp() 數字，跟 F3/F4 用的 .modal 基礎尺寸（92vw/90vh, max 1300x860）不一樣，兩種面板大小沒有統一；而且皮膚 class 一掛上去就立刻套用顏色/圖片，沒有跟圖片是否真的載入完成脫鉤，圖片慢或失敗時會有半吊子的中間態。第四輪：(1) 尺寸完全不再覆寫，B/H/F1/F2 直接沿用 hud.css 的 .modal 基礎尺寸，物理上跟 F3/F4 是同一條 CSS 規則，不是兩邊分別維護一套數字；side/detail 欄寬也比照拿掉，直接用 hud.css 預設的 80px/280px。(2) 外觀改成兩階段：面板剛開啟時（.modal-skin-<id> 剛掛上）長得跟 F3/F4 一模一樣（深色科技風、標題正常大小、關閉鈕是預設圓形按鈕），只有等 hud-core.js 用 new Image() 預先載入完角落圖示（成功或失敗都算完成，不會卡住）之後，才多掛一個 .skin-ready，這時候 panel-skins.css 裡幾乎所有跟顏色/圖片有關的規則才會生效。(3) 關閉鈕不再做成獨立的絕對定位角落，改回沿用 hud.css 原本在 header 內的位置（margin-left:auto，跟 F3/F4 同一個元件同一個位置），只換視覺不換位置。詳見 NWL.md（已第四次改版）。",
-    "【已修正・第五輪】第四輪的兩階段外觀（image-preload + .skin-ready）有個根本問題：角落圖示是固定 bundled 在 repo 裡的檔案，瀏覽器幾乎瞬間就載入完成，實際體驗上等於「面板一開就強制換色」，跟「沒套用風格時該維持 F3/F4 原本樣子」的需求不符——用圖片載入時間當判斷依據，本質上是錯的依據。第五輪改成掛勾到系統既有的主題機制：hud-utils.js 的 applyTheme(theme.json) 新增一個選填的 panelSkins 區塊（enabled/trimTop/trimSide/text/panels），只有目前套用的主題明確定義 panelSkins.enabled===true，才會幫 <html> 掛上 .nw-skins-enabled；panel-skins.css 幾乎所有跟顏色/圖片有關的規則都改成掛在 html.nw-skins-enabled 這個祖先選擇器底下，跟個別 .modal 的 class 無關。系統內建的 default/gamification/cyber 三個主題都沒有這個欄位，所以預設（開機自動載入 default 主題）情況下 B/H/F1/F2 開啟時會跟 F3/F4 一模一樣，要啟用皮膚純粹是主題設定的事，不是圖片載入時間的事。hud-core.js 移除了整個 preloadImages/SKIN_CORNER_ASSETS 機制。詳見 NWL.md（已第五次改版）、assets/themes/README.md 的 panelSkins 欄位說明。"
+    "【已修正・第五輪】第四輪的兩階段外觀（image-preload + .skin-ready）有個根本問題：角落圖示是固定 bundled 在 repo 裡的檔案，瀏覽器幾乎瞬間就載入完成，實際體驗上等於「面板一開就強制換色」，跟「沒套用風格時該維持 F3/F4 原本樣子」的需求不符——用圖片載入時間當判斷依據，本質上是錯的依據。第五輪改成掛勾到系統既有的主題機制：hud-utils.js 的 applyTheme(theme.json) 新增一個選填的 panelSkins 區塊（enabled/trimTop/trimSide/text/panels），只有目前套用的主題明確定義 panelSkins.enabled===true，才會幫 <html> 掛上 .nw-skins-enabled；panel-skins.css 幾乎所有跟顏色/圖片有關的規則都改成掛在 html.nw-skins-enabled 這個祖先選擇器底下，跟個別 .modal 的 class 無關。系統內建的 default/gamification/cyber 三個主題都沒有這個欄位，所以預設（開機自動載入 default 主題）情況下 B/H/F1/F2 開啟時會跟 F3/F4 一模一樣，要啟用皮膚純粹是主題設定的事，不是圖片載入時間的事。hud-core.js 移除了整個 preloadImages/SKIN_CORNER_ASSETS 機制。詳見 NWL.md（已第五次改版）、assets/themes/README.md 的 panelSkins 欄位說明。",
+    "【架構已完成，等素材】把 NW 皮膚架構（角落圖示 + CSS 邊條 + theme.json 的 panelSkins 開關）比照 B/H/F1/F2 的模式套用到 F3（測試套件監控）/F4（目標專案時程）/F5（知識圖鑑）。hud-core.js 的 openModal() 現在對 f3/f4/f5 也會掛 modal-skin-<id>/nw-frame（f5 額外掛 nw-list，因為文件搜尋結果是條列式清單；f4 是 Grid Layout 里程碑卡片；f3 內容整個是 iframe，不套用 Grid/List）。panel-skins.css 新增三個對應區塊，CSS 變數命名延續 --nw-body-<id>/--nw-badge-url-<id>/--nw-close-url-<id> 的規則，theme.json 的 panelSkins.panels 可以用 f3/f4/f5 這三個 key 覆寫。目前 t_badge.png/t_close.png（F3）、p_badge.png/p_close.png（F4）、w_badge.png/w_close.png（F5）六個角落圖示還沒有實際檔案（status: missing，見上面 panelArt 新增的六筆），等圖到位直接放進 assets/panel-art/ 對應檔名即可，不用改任何 CSS/JS——圖片不存在時角落只是顯示空白，不影響版面。"
   ]
 }

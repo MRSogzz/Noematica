@@ -172,9 +172,17 @@ application/frontend/assets/
 
 ## 7. 面板專屬素材 vs. 主題素材
 
-`assets/panel-art/` 底下的素材（外框、格子紋理、按鈕圖示）目前**不隨主題切換**——一個面板的視覺皮膚是獨立於 `theme.json` 之外的另一套系統（`.modal-skin-<id>` class，見 NDL §9.2）。
+`assets/panel-art/` 底下的素材（角落圖示、格子紋理、按鈕圖示）本身還是獨立檔案，不是塞進 `themes/<id>/` 底下，但**是否套用、套用哪一組顏色**已經是 `theme.json` 的一部分——`panelSkins` 這個選填區塊（見 `NWL.md` §2、`assets/themes/README.md`）讓一個主題可以指定要不要啟用 B/H/F1/F2/F3/F4/F5 的皮膚、邊條顏色、以及每個面板對應的 `badge`/`close`/`body` 底色路徑。這比 NAL 舊版說的「完全不隨主題切換」進了一步，但還沒有做到「素材檔案本身也放進 `themes/<id>/panel-art/`」——目前所有主題如果都啟用 `panelSkins`，指到的都是同一批 `assets/panel-art/` 檔案，還沒辦法讓不同主題各自配一套完全不同的圖（例如「賽博龐克主題」換成賽博風外框），這件事還沒有排入範圍，先記錄下來供之後規劃參考。
 
-這是目前的技術現實，不是刻意的最終設計——如果未來要讓面板皮膚也能跟著主題整套切換（例如「賽博龐克主題」連背包外框都要換成賽博風），需要把 `panel-art` 素材也移進 `themes/<id>/panel-art/` 底下、並修改 CSS 從 `modal-skin-<id>` 改成讀取當前主題的路徑。這件事還沒有排入範圍，這裡先記錄下來供之後規劃參考。
+**目前缺件的素材**（架構已經接好，等圖到位即可，見 `panel-skins.css` 對應的 `.modal-skin-f3/f4/f5` 區塊）：
+
+| 面板 | 素材前綴 | 缺件 | 說明 |
+|---|---|---|---|
+| F3（測試套件監控） | `t` | `t_badge.png`、`t_close.png` | F3 內容是整個 `panel-tests.html` 的 iframe，只需要角落圖示，不需要格子/清單相關素材 |
+| F4（目標專案時程） | `p` | `p_badge.png`、`p_close.png` | 里程碑卡片是 Grid Layout，暫時沒有專屬格子底圖（不像 B 有 `b_slot.png`），卡片用純 CSS 上色 |
+| F5（知識圖鑑） | `w` | `w_badge.png`、`w_close.png` | List Layout，文件搜尋結果是條列式清單，跟 F2 一樣不需要格子素材 |
+
+裁切規格比照 `b_badge.png`/`b_close.png` 等既有素材：獨立方形圖示、背景透明，不用切九宮格（見 §6.1）。素材補齊後，直接把檔案放進 `assets/panel-art/`（沿用上表的檔名），不用改任何 CSS/JS——`panel-skins.css` 已經指到這些路徑，圖片不存在時角落只是顯示空白，不影響版面（見 §8 降級規則）。
 
 ---
 
