@@ -80,8 +80,8 @@ export function schemaCompatible(
   inp: IOSchema,
 ): { ok: boolean; reason: string } {
 
-  const outType = out.type;
-  const inpType = inp.type;
+  const outType = jsonSchemaTypeToIOType(out.type);
+  const inpType = jsonSchemaTypeToIOType(inp.type);
 
   // ── Layer 1: 頂層 type ───────────────────────────────────────────────────
   if (!topLevelCompatible(outType, inpType)) {
@@ -203,8 +203,8 @@ export function validateConnection(
   moduleB: ModuleMeta,
   strict  = false,
 ): ConnectionResult {
-  const outputType = moduleA.output.type;
-  const inputType  = moduleB.input.type;
+  const outputType = jsonSchemaTypeToIOType(moduleA.output.type);
+  const inputType  = jsonSchemaTypeToIOType(moduleB.input.type);
 
   // ← 改用 schemaCompatible，傳入完整 IOSchema
   const { ok: compatible, reason } = schemaCompatible(moduleA.output, moduleB.input);
