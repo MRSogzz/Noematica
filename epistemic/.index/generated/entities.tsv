@@ -1,15 +1,26 @@
 uid	name	domains	aliases	type
 backpropagation	反向傳播	Training	Backpropagation	Optimization_Algorithm
 bank_net_interest_margin	銀行淨利差	macro,finance	NIM,銀行獲利,淨息差	macro_variable
+cross_entropy_loss	交叉熵損失函數	Training	Cross-Entropy Loss	Loss_Function
 dropout	丟棄法	Deep Learning,Regularization	隨機停用神經元	Technique
 fed_funds_rate	聯邦基金利率	macro,finance	FFR,美國基準利率,聯準會利率	macro_variable
 generalization_ability	泛化能力	Model Performance	過擬合的對立面	Metric
+gradient_descent	梯度下降	Training	Gradient Descent	Optimization_Algorithm
 gradient_propagation	梯度傳遞	Optimization,Backpropagation	梯度消失	Process
+greedy_decoding	貪婪解碼	Inference	Greedy Decoding	Sampling_Strategy
+inference_phase	推理階段	Model_Operation	Inference	Phase
 large_ai_model	大型人工智慧模型	Artificial Intelligence,Deep Learning	AI Model	Concept
 normalization	正規化	Deep Learning,Optimization	Batch Normalization,批次正規化	Technique
 overfitting	過擬合	Model Performance	資料過擬合	Problem
 positional_encoding_mechanism	位置編碼機制	nlp,deep_learning	位置編碼,Positional Encoding,位置向量,Positional Embedding	concept
+prediction_accuracy	預測準確度	Performance	Accuracy	Metric
+prediction_error	預測誤差	Training	Loss	Metric
+probability_distribution	機率分布	Inference	Token Probability Distribution	Data_Structure
 residual_connection	殘差連接	Deep Learning,Architecture	Skip Connection,捷徑連接	Technique
+temperature	Temperature	Inference	溫度係數	Sampling_Parameter
+top_k_sampling	Top-K 抽樣	Inference	Top-K Sampling	Sampling_Strategy
+top_p_sampling	Top-P 抽樣	Inference	Nucleus Sampling	Sampling_Strategy
+training_phase	訓練階段	Model_Operation	Training	Phase
 training_stability	訓練穩定性	Model Performance	訓練過程中的不穩定性	Metric
 transformer_architecture	Transformer 架構	nlp,deep_learning	Transformer,自注意力架構	concept
 tsmc	台積電	semiconductor,taiwan_equity	TSMC,台灣積體電路,2330	company
