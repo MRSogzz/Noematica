@@ -3,50 +3,66 @@
    ============================================================
    每個面板開啟後共用同一個 .modal 殼（見 hud.css 的 .modal / .modal-header /
    .m-sidebar / .m-toolbar / .m-grid-wrap / .m-detail）。這份檔案讓
-   B/H/F1/F2 四個面板在圖片素材準備好之後套用對應的美術配色跟角落圖示，
-   但完全不動 hud-panels.js 裡的真實功能邏輯，也不動 .modal 的尺寸——
-   跟 F3/F4 用同一個 92vw/90vh（見 hud.css .modal）。
+   B/H/F1/F2 四個面板可以套用對應的美術配色跟角落圖示，但完全不動
+   hud-panels.js 裡的真實功能邏輯，也不動 .modal 的尺寸——跟 F3/F4 用
+   同一個 92vw/90vh（見 hud.css .modal）。
 
    ============================================================
-   核心原則：圖片不能影響設計，載入完成前後兩個狀態要分清楚
+   核心原則：外觀是否套用，由「目前套用的風格」決定，不是強制的
    ============================================================
    1. **尺寸永遠跟 F3/F4 一樣**：這份檔案完全不覆寫 .modal 的
       width/height，B/H/F1/F2 開啟時就是 hud.css 定義的 92vw/90vh
       （max 1300×860），跟 F3/F4 同一個標準，不會有些面板大有些面板小。
-   2. **兩段式外觀**：面板剛開啟時（`.modal-skin-<id>` 掛上、但還沒掛
-      `.skin-ready`）長得跟 F3/F4 完全一樣——深色科技風、標題正常顯示、
-      關閉鈕是預設圓形按鈕、方格清單是預設深色卡片。這份檔案裡幾乎所有
-      規則都掛在 `.skin-ready` 這個 class 底下，`hud-core.js` 的
-      `openModal()` 會先把角落圖示（`_badge.png`/`_close.png`）用
-      `new Image()` 預先載入，全部載入完成（或失敗，失敗也會 resolve，
-      不會卡住）之後才幫 `.modal` 掛上 `.skin-ready`，這時候才會套用
-      咖啡色配色跟角落圖示。這樣不管圖片載入快慢、成功失敗，介面在
-      任何時間點看起來都是「完整的一種樣子」（深色科技風或皮膚後的樣子），
-      不會有版面跑掉、圖片還沒到位就先套用了顏色這種中間態。
+
+   2. **顏色/圖片只在套用了對應的風格時才生效，不是打開面板就強制換**：
+      這份檔案裡幾乎所有跟顏色/圖片有關的規則都掛在 `html.nw-skins-enabled`
+      這個祖先選擇器底下（是 `<html>` 上的 class，不是掛在個別 `.modal`
+      上）。這個 class 只有一個來源：`hud-utils.js` 的
+      `applyTheme(theme.json)`——如果目前套用的 theme.json 有
+      `panelSkins.enabled === true`，才會幫 `<html>` 掛上這個 class；
+      沒有這個欄位（目前內建的 default／gamification／cyber 三個主題都
+      沒有）就完全不會掛，B/H/F1/F2 開啟時會維持 `.modal-skin-<id>`/
+      `.nw-frame` 這幾個結構用的 class，但視覺上長得跟 F3/F4 一模一樣
+      （深色科技風、標題正常顯示、關閉鈕是預設圓形按鈕、方格清單是
+      預設深色卡片），因為所有改外觀的規則都因為 `html.nw-skins-enabled`
+      不存在而不生效。
+
+      這是第五版的做法，取代前一版「用 `new Image()` 預先載入角落圖示、
+      載入完成後幫 `.modal` 掛 `.skin-ready`」的機制——那個機制的問題是
+      角落圖示是固定 bundled 在 repo 裡的檔案，瀏覽器幾乎瞬間就能載入
+      完成，實際體驗上等於「不管有沒有套用風格，顏色都會立刻強制换掉」，
+      不符合「沒套用風格就該維持 F3/F4 原本樣子」的需求。現在改成掛勾
+      到真正的主題系統（跟 key 圖示／頭像／背景圖套用邏輯是同一條路徑），
+      「有沒有套用風格」有一個明確、跟圖片載入時間無關的判斷依據。
+
    3. **角落裝飾是額外疊加層，不影響版面**：左上（面板徽章）、左下、
       右下三個裝飾角落是 `position:absolute` 疊在 `.modal` 上的獨立
-      `.nw-corner` 元素，`display:none` 直到 `.skin-ready` 才顯示——
-      本來就不佔版面空間，不管有沒有載入、載入多久，都不會讓旁邊的
-      標題／內容跟著跑位。右上的關閉鈕沿用 hud.css 原本在 header 裡
-      的 `.modal-close`（跟 F3/F4 用同一個元件、同一個位置），`.skin-ready`
-      之後只換視覺（改成顯示圖示），不換位置。
+      `.nw-corner` 元素，預設 `display:none`，只有 `html.nw-skins-enabled`
+      時才顯示——本來就不佔版面空間，不管有沒有套用風格，都不會讓旁邊的
+      標題／內容跟著跑位。右上的關閉鈕沿用 hud.css 原本在 header 裡的
+      `.modal-close`（跟 F3/F4 用同一個元件、同一個位置），套用風格後
+      只換視覺（改成顯示圖示），不換位置。
 
    側欄一律維持原本在左邊、垂直排列的版面結構，不搬動位置（曾經把 B 的
    側欄搬成水平列，脫離 flex 版面流，導致格子版面計算壞掉、東西全部
    擠成一坨，這是明確教訓）。
 
-   內容版面（Layout Type，見 docs/design-system/NWL.md §3）：
-     - B：Grid Layout（跟 F3/F4 預設一樣，`.skin-ready` 後只是換成
-       b_slot.png 當格子底圖，不換版面結構）。
-     - F1／F2：`.skin-ready` 之後改成單欄清單、邊緣透明（見 .nw-list），
-       載入完成前跟 F3/F4 一樣是預設方格。
+   內容版面（Layout Type，見 docs/design-system/NWL.md §5）：
+     - B：Grid Layout（跟 F3/F4 預設一樣，套用風格後只是換成 b_slot.png
+       當格子底圖，不換版面結構）。
+     - F1／F2：套用風格後改成單欄清單、邊緣透明（見 .nw-list），沒套用
+       風格時跟 F3/F4 一樣是預設方格。
      - H：panel-h.js 是完全自訂的聊天室版面，不套用上面兩種骨架。
 
-   文字顏色統一用 rgb(45,30,27)（咖啡色），只在 `.skin-ready` 之後套用。
+   文字顏色統一用 rgb(45,30,27)（咖啡色），只在套用了風格之後套用，
+   透過覆寫全域 --text 變數傳到 inline style="color:var(--text)" 的地方
+   （F1 編輯器、F2 commit 清單），見 hud-utils.js 的 applyTheme()。
    ============================================================ */
 
 /* ── NW 共用邊框元件（B/H/F1/F2 四個皮膚共用；.nw-corner 系列一律
-   display:none，只有 .skin-ready 之後才顯示，見上方核心原則 2/3）──── */
+   display:none，只有 html.nw-skins-enabled 時才顯示，見上方核心原則 2/3）──── */
+（B/H/F1/F2 四個皮膚共用；.nw-corner 系列一律
+   display:none，只有 html.nw-skins-enabled 時才顯示，見上方核心原則 2/3）──── */
 .modal.nw-frame {
   --nw-trim-top: #2c5c8f;
   --nw-trim-side: #c9a86a;
@@ -61,20 +77,20 @@
   position: absolute; width: var(--nw-corner-size); height: var(--nw-corner-size);
   z-index: 8; pointer-events: none;
 }
-.modal.nw-frame.skin-ready .nw-corner { display: block; }
+html.nw-skins-enabled .modal.nw-frame .nw-corner { display: block; }
 .modal.nw-frame .nw-corner-tl { top: -4px; left: -4px; }
 .modal.nw-frame .nw-corner-bl { bottom: -4px; left: -4px; }
 .modal.nw-frame .nw-corner-br { bottom: -4px; right: -4px; }
 
-.modal.nw-frame.skin-ready .nw-corner::before {
+html.nw-skins-enabled .modal.nw-frame .nw-corner::before {
   content: ''; position: absolute; inset: 0;
   border-style: solid; border-color: var(--nw-trim-side); border-width: 0;
 }
-.modal.nw-frame.skin-ready .nw-corner-tl::before { border-width: 4px 0 0 4px; border-top-left-radius: 12px; }
-.modal.nw-frame.skin-ready .nw-corner-bl::before { border-width: 0 0 4px 4px; border-bottom-left-radius: 12px; }
-.modal.nw-frame.skin-ready .nw-corner-br::before { border-width: 0 4px 4px 0; border-bottom-right-radius: 12px; }
+html.nw-skins-enabled .modal.nw-frame .nw-corner-tl::before { border-width: 4px 0 0 4px; border-top-left-radius: 12px; }
+html.nw-skins-enabled .modal.nw-frame .nw-corner-bl::before { border-width: 0 0 4px 4px; border-bottom-left-radius: 12px; }
+html.nw-skins-enabled .modal.nw-frame .nw-corner-br::before { border-width: 0 4px 4px 0; border-bottom-right-radius: 12px; }
 
-.modal.nw-frame.skin-ready .nw-badge {
+html.nw-skins-enabled .modal.nw-frame .nw-badge {
   background-image: var(--nw-badge-url);
   background-size: 60%; background-position: center; background-repeat: no-repeat;
 }
@@ -83,149 +99,149 @@
    hud.css 預設的 border）；載入完成後才換成邊框色 + 底色 + 文字色。
    尺寸（width/height）自始至終都沒有被覆寫，永遠跟 F3/F4 同一個
    92vw/90vh 標準。 */
-.modal.nw-frame.skin-ready {
+html.nw-skins-enabled .modal.nw-frame {
   background: var(--nw-body, #f5ecd9);
   border-color: var(--nw-trim-side);
   border-top: 3px solid var(--nw-trim-top);
   color: var(--nw-text);
 }
-.modal.nw-frame.skin-ready .modal-body { background: transparent; }
+html.nw-skins-enabled .modal.nw-frame .modal-body { background: transparent; }
 
 /* 標題列：載入完成前跟 hud.css 預設一樣（深色 header、標題正常顯示、
    置中、大小跟 F3/F4 相同），不會有「標題太小」的問題，因為根本沒有
    另外覆寫過標題樣式。載入完成後只換底色跟文字色，位置/大小不變。 */
-.modal.nw-frame.skin-ready .modal-header {
+html.nw-skins-enabled .modal.nw-frame .modal-header {
   background: rgba(255,255,255,0.25);
   border-bottom-color: rgba(120,84,40,0.2);
 }
-.modal.nw-frame.skin-ready .modal-title { color: var(--nw-text); }
+html.nw-skins-enabled .modal.nw-frame .modal-title { color: var(--nw-text); }
 
 /* 關閉鈕：沿用 hud.css 裡原本在 header 內的 .modal-close（跟 F3/F4
    同一個元件、同一個位置——margin-left:auto 讓它自然貼齊 header 右側），
    載入完成前维持預設圓形按鈕＋「✕」文字；載入完成後只換視覺（改成
    顯示 --nw-close-url 這張圖），完全不改位置。 */
-.modal.nw-frame.skin-ready .modal-close {
+html.nw-skins-enabled .modal.nw-frame .modal-close {
   background-color: transparent; border-color: transparent;
   background-image: var(--nw-close-url);
   background-size: 65%; background-position: center; background-repeat: no-repeat;
   color: transparent; font-size: 0;
 }
-.modal.nw-frame.skin-ready .modal-close:hover { filter: brightness(1.12); background-color: transparent; }
+html.nw-skins-enabled .modal.nw-frame .modal-close:hover { filter: brightness(1.12); background-color: transparent; }
 
 /* 清單樣式（F1/F2，靠 .nw-list 這個標記 class 啟用）：載入完成前跟
    F3/F4 一樣是預設方格清單，載入完成後才換成單欄橫列、邊緣透明——
    跟「條列式清單」「寫筆記」的情境比較搭。B 沒有 .nw-list，維持方格。 */
-.modal.nw-frame.skin-ready.nw-list .m-item-grid {
+html.nw-skins-enabled .modal.nw-frame.nw-list .m-item-grid {
   display: flex; flex-direction: column; gap: 2px;
 }
-.modal.nw-frame.skin-ready.nw-list .m-item-grid .m-item {
+html.nw-skins-enabled .modal.nw-frame.nw-list .m-item-grid .m-item {
   aspect-ratio: unset;
   display: flex; flex-direction: row; align-items: center; justify-content: flex-start;
   gap: 10px; padding: 9px 14px; height: auto;
   background: transparent; border: none; border-radius: 6px;
   border-bottom: 1px solid rgba(120,84,40,0.12);
 }
-.modal.nw-frame.skin-ready.nw-list .m-item-grid .m-item:hover { background: rgba(120,84,40,0.06); }
-.modal.nw-frame.skin-ready.nw-list .m-item-grid .m-item.active { background: rgba(120,84,40,0.1); }
-.modal.nw-frame.skin-ready.nw-list .m-item-grid .m-item .m-item-icon { font-size: 16px; }
-.modal.nw-frame.skin-ready.nw-list .m-item-grid .m-item .m-item-name { color: var(--nw-text) !important; text-align: left; flex: 1; }
-.modal.nw-frame.skin-ready.nw-list .m-item-grid .m-item .m-item-badge { position: static; font-size: 10px; color: rgba(45,30,27,0.5); font-weight: 400; }
+html.nw-skins-enabled .modal.nw-frame.nw-list .m-item-grid .m-item:hover { background: rgba(120,84,40,0.06); }
+html.nw-skins-enabled .modal.nw-frame.nw-list .m-item-grid .m-item.active { background: rgba(120,84,40,0.1); }
+html.nw-skins-enabled .modal.nw-frame.nw-list .m-item-grid .m-item .m-item-icon { font-size: 16px; }
+html.nw-skins-enabled .modal.nw-frame.nw-list .m-item-grid .m-item .m-item-name { color: var(--nw-text) !important; text-align: left; flex: 1; }
+html.nw-skins-enabled .modal.nw-frame.nw-list .m-item-grid .m-item .m-item-badge { position: static; font-size: 10px; color: rgba(45,30,27,0.5); font-weight: 400; }
 
 
 /* ── B：模組背包 ─────────────────────────────────────────────────── */
 .modal.modal-skin-b {
-  --nw-body: #f6ecd9;
-  --nw-badge-url: url('assets/panel-art/b_badge.png');
-  --nw-close-url: url('assets/panel-art/b_close.png');
+  --nw-body: var(--nw-body-b, #f6ecd9);
+  --nw-badge-url: var(--nw-badge-url-b, url('assets/panel-art/b_badge.png'));
+  --nw-close-url: var(--nw-close-url-b, url('assets/panel-art/b_close.png'));
 }
 
-.modal.modal-skin-b.skin-ready .m-cat {
+html.nw-skins-enabled .modal.modal-skin-b .m-cat {
   background: rgba(255,255,255,0.35); border: 1px solid rgba(120,84,40,0.18);
 }
-.modal.modal-skin-b.skin-ready .m-cat:hover { background: rgba(255,255,255,0.55); }
-.modal.modal-skin-b.skin-ready .m-cat.active {
+html.nw-skins-enabled .modal.modal-skin-b .m-cat:hover { background: rgba(255,255,255,0.55); }
+html.nw-skins-enabled .modal.modal-skin-b .m-cat.active {
   background: linear-gradient(180deg, #f0b545, #d98a1f);
   border-color: #a5661c;
   box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
-.modal.modal-skin-b.skin-ready .m-cat-lbl { color: rgba(45,30,27,0.68); }
-.modal.modal-skin-b.skin-ready .m-cat.active .m-cat-lbl { color: rgb(45,30,27); font-weight: 700; }
+html.nw-skins-enabled .modal.modal-skin-b .m-cat-lbl { color: rgba(45,30,27,0.68); }
+html.nw-skins-enabled .modal.modal-skin-b .m-cat.active .m-cat-lbl { color: rgb(45,30,27); font-weight: 700; }
 
-.modal.modal-skin-b.skin-ready .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
-.modal.modal-skin-b.skin-ready .m-search {
+html.nw-skins-enabled .modal.modal-skin-b .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
+html.nw-skins-enabled .modal.modal-skin-b .m-search {
   background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.25); color: rgb(45,30,27);
 }
-.modal.modal-skin-b.skin-ready .m-search::placeholder { color: rgba(45,30,27,0.4); }
+html.nw-skins-enabled .modal.modal-skin-b .m-search::placeholder { color: rgba(45,30,27,0.4); }
 
 /* 背包是 Grid Layout：載入完成前是預設深色方格（跟 F3/F4 一樣），
    載入完成後每個 item 換成 b_slot.png 當格子底圖，版面結構不變。 */
-.modal.modal-skin-b.skin-ready .m-item {
+html.nw-skins-enabled .modal.modal-skin-b .m-item {
   background-image: url('assets/panel-art/b_slot.png');
   background-size: 100% 100%; background-color: transparent;
   border: none; border-radius: 10px;
 }
-.modal.modal-skin-b.skin-ready .m-item:hover { filter: brightness(1.08); }
-.modal.modal-skin-b.skin-ready .m-item.active { filter: brightness(1.15) saturate(1.1); }
-.modal.modal-skin-b.skin-ready .m-item-name { color: rgb(45,30,27) !important; text-shadow: 0 1px 0 rgba(255,255,255,0.4); }
+html.nw-skins-enabled .modal.modal-skin-b .m-item:hover { filter: brightness(1.08); }
+html.nw-skins-enabled .modal.modal-skin-b .m-item.active { filter: brightness(1.15) saturate(1.1); }
+html.nw-skins-enabled .modal.modal-skin-b .m-item-name { color: rgb(45,30,27) !important; text-shadow: 0 1px 0 rgba(255,255,255,0.4); }
 
-.modal.modal-skin-b.skin-ready .m-detail { background: rgba(255,255,255,0.4); border-left: 1px solid rgba(120,84,40,0.15); }
-.modal.modal-skin-b.skin-ready .m-detail-name { color: rgb(45,30,27); }
-.modal.modal-skin-b.skin-ready .m-attr-text { color: rgb(45,30,27); }
-.modal.modal-skin-b.skin-ready .m-detail-desc { color: rgba(45,30,27,0.75); }
+html.nw-skins-enabled .modal.modal-skin-b .m-detail { background: rgba(255,255,255,0.4); border-left: 1px solid rgba(120,84,40,0.15); }
+html.nw-skins-enabled .modal.modal-skin-b .m-detail-name { color: rgb(45,30,27); }
+html.nw-skins-enabled .modal.modal-skin-b .m-attr-text { color: rgb(45,30,27); }
+html.nw-skins-enabled .modal.modal-skin-b .m-detail-desc { color: rgba(45,30,27,0.75); }
 
-.modal.modal-skin-b.skin-ready .b-btn-validate,
-.modal.modal-skin-b.skin-ready .b-btn-clear {
+html.nw-skins-enabled .modal.modal-skin-b .b-btn-validate,
+html.nw-skins-enabled .modal.modal-skin-b .b-btn-clear {
   background-size: contain; background-position: center; background-repeat: no-repeat;
   border: none; font-size: 0;
 }
-.modal.modal-skin-b.skin-ready .b-btn-validate { background-image: url('assets/panel-art/b_btn_backpack.png'); background-color: transparent; }
-.modal.modal-skin-b.skin-ready .b-btn-clear    { background-image: url('assets/panel-art/b_btn_trash.png'); background-color: transparent; }
-.modal.modal-skin-b.skin-ready .b-btn-validate:hover,
-.modal.modal-skin-b.skin-ready .b-btn-clear:hover { filter: brightness(1.12); }
+html.nw-skins-enabled .modal.modal-skin-b .b-btn-validate { background-image: url('assets/panel-art/b_btn_backpack.png'); background-color: transparent; }
+html.nw-skins-enabled .modal.modal-skin-b .b-btn-clear    { background-image: url('assets/panel-art/b_btn_trash.png'); background-color: transparent; }
+html.nw-skins-enabled .modal.modal-skin-b .b-btn-validate:hover,
+html.nw-skins-enabled .modal.modal-skin-b .b-btn-clear:hover { filter: brightness(1.12); }
 
 
 /* ── H：AI 知識整理小幫手 ───────────────────────────────────────────
    panel-h.js 是完全自訂版面（聊天室 UI），不套用 Grid/List Layout，
    維持原樣，只套用 NW 邊框（載入完成前跟 F3/F4 一樣）。 ──────────── */
 .modal.modal-skin-h {
-  --nw-body: #f7ecd6;
-  --nw-badge-url: url('assets/panel-art/h_badge.png');
-  --nw-close-url: url('assets/panel-art/h_close.png');
+  --nw-body: var(--nw-body-h, #f7ecd6);
+  --nw-badge-url: var(--nw-badge-url-h, url('assets/panel-art/h_badge.png'));
+  --nw-close-url: var(--nw-close-url-h, url('assets/panel-art/h_close.png'));
 }
 
-.modal.modal-skin-h.skin-ready .m-sidebar { background: transparent; border-right: 1px solid rgba(120,84,40,0.15); }
-.modal.modal-skin-h.skin-ready .m-cat-lbl { color: rgba(45,30,27,0.68); }
-.modal.modal-skin-h.skin-ready .m-cat:hover { background: rgba(59,104,148,0.06); }
-.modal.modal-skin-h.skin-ready .m-cat.active {
+html.nw-skins-enabled .modal.modal-skin-h .m-sidebar { background: transparent; border-right: 1px solid rgba(120,84,40,0.15); }
+html.nw-skins-enabled .modal.modal-skin-h .m-cat-lbl { color: rgba(45,30,27,0.68); }
+html.nw-skins-enabled .modal.modal-skin-h .m-cat:hover { background: rgba(59,104,148,0.06); }
+html.nw-skins-enabled .modal.modal-skin-h .m-cat.active {
   background: rgba(59,104,148,0.13); border-color: rgba(59,104,148,0.38);
 }
-.modal.modal-skin-h.skin-ready .m-cat.active .m-cat-lbl { color: #2c5a86; }
+html.nw-skins-enabled .modal.modal-skin-h .m-cat.active .m-cat-lbl { color: #2c5a86; }
 
-.modal.modal-skin-h.skin-ready .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
-.modal.modal-skin-h.skin-ready .m-search {
+html.nw-skins-enabled .modal.modal-skin-h .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
+html.nw-skins-enabled .modal.modal-skin-h .m-search {
   background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.25); color: rgb(45,30,27);
 }
-.modal.modal-skin-h.skin-ready .m-search::placeholder { color: rgba(45,30,27,0.4); }
+html.nw-skins-enabled .modal.modal-skin-h .m-search::placeholder { color: rgba(45,30,27,0.4); }
 
-.modal.modal-skin-h.skin-ready .m-item {
+html.nw-skins-enabled .modal.modal-skin-h .m-item {
   background: rgba(255,255,255,0.45); border-color: rgba(120,84,40,0.18);
 }
-.modal.modal-skin-h.skin-ready .m-item:hover {
+html.nw-skins-enabled .modal.modal-skin-h .m-item:hover {
   border-color: rgba(59,104,148,0.4); background: rgba(255,255,255,0.7);
 }
-.modal.modal-skin-h.skin-ready .m-item-name { color: rgb(45,30,27) !important; }
+html.nw-skins-enabled .modal.modal-skin-h .m-item-name { color: rgb(45,30,27) !important; }
 
-.modal.modal-skin-h.skin-ready .m-detail { background: rgba(255,255,255,0.35); border-left: 1px solid rgba(120,84,40,0.15); }
-.modal.modal-skin-h.skin-ready .m-detail-name { color: rgb(45,30,27); }
-.modal.modal-skin-h.skin-ready .m-attr-text { color: rgb(45,30,27); }
-.modal.modal-skin-h.skin-ready .m-detail-desc { color: rgba(45,30,27,0.75); }
+html.nw-skins-enabled .modal.modal-skin-h .m-detail { background: rgba(255,255,255,0.35); border-left: 1px solid rgba(120,84,40,0.15); }
+html.nw-skins-enabled .modal.modal-skin-h .m-detail-name { color: rgb(45,30,27); }
+html.nw-skins-enabled .modal.modal-skin-h .m-attr-text { color: rgb(45,30,27); }
+html.nw-skins-enabled .modal.modal-skin-h .m-detail-desc { color: rgba(45,30,27,0.75); }
 
-.modal.modal-skin-h.skin-ready .wiki-ai-panel { background: transparent; color: rgb(45,30,27); }
+html.nw-skins-enabled .modal.modal-skin-h .wiki-ai-panel { background: transparent; color: rgb(45,30,27); }
 /* 小幫手頭像：h_avatar_frame.png 當外框，h_avatar_default/happy/thinking.png
    當實際頭像圖——三種表情供 panel-h.js 依對話狀態切換，目前 panel-h.js
    還沒有實作表情切換邏輯，這裡先把 CSS class 定義好。這個頭像跟聊天室
    內容一樣不受「載入完成前後」影響，本來就是 panel-h.js 自己控制的內容，
-   不算這份檔案的皮膚系統範圍，所以沒有掛 .skin-ready。 */
+   不算這份檔案的皮膚系統範圍，所以沒有掛 html.nw-skins-enabled 限定。 */
 .modal.modal-skin-h .h-avatar {
   width: 48px; height: 48px; border-radius: 50%;
   background-image: url('assets/panel-art/h_avatar_frame.png'), url('assets/panel-art/h_avatar_default.png');
@@ -238,77 +254,77 @@
 /* ── N：個人日誌／筆記（對應 hud-core.js 的 F1 鍵，美術素材前綴是 n_）
    ───────────────────────────────────────────────────────────────── */
 .modal.modal-skin-f1 {
-  --nw-body: #f5ecd9;
-  --nw-badge-url: url('assets/panel-art/n_badge.png');
-  --nw-close-url: url('assets/panel-art/n_close.png');
+  --nw-body: var(--nw-body-f1, #f5ecd9);
+  --nw-badge-url: var(--nw-badge-url-f1, url('assets/panel-art/n_badge.png'));
+  --nw-close-url: var(--nw-close-url-f1, url('assets/panel-art/n_close.png'));
 }
 
-.modal.modal-skin-f1.skin-ready .m-cat { background: rgba(255,255,255,0.35); border: 1px solid rgba(120,84,40,0.18); }
-.modal.modal-skin-f1.skin-ready .m-cat:hover { background: rgba(255,255,255,0.55); }
-.modal.modal-skin-f1.skin-ready .m-cat.active {
+html.nw-skins-enabled .modal.modal-skin-f1 .m-cat { background: rgba(255,255,255,0.35); border: 1px solid rgba(120,84,40,0.18); }
+html.nw-skins-enabled .modal.modal-skin-f1 .m-cat:hover { background: rgba(255,255,255,0.55); }
+html.nw-skins-enabled .modal.modal-skin-f1 .m-cat.active {
   background: linear-gradient(180deg, #f0b545, #d98a1f);
   border-color: #a5661c; box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
-.modal.modal-skin-f1.skin-ready .m-cat-lbl { color: rgba(45,30,27,0.68); }
-.modal.modal-skin-f1.skin-ready .m-cat.active .m-cat-lbl { color: rgb(45,30,27); font-weight: 700; }
+html.nw-skins-enabled .modal.modal-skin-f1 .m-cat-lbl { color: rgba(45,30,27,0.68); }
+html.nw-skins-enabled .modal.modal-skin-f1 .m-cat.active .m-cat-lbl { color: rgb(45,30,27); font-weight: 700; }
 
-.modal.modal-skin-f1.skin-ready .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
-.modal.modal-skin-f1.skin-ready .m-search { background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.25); color: rgb(45,30,27); }
-.modal.modal-skin-f1.skin-ready .m-search::placeholder { color: rgba(45,30,27,0.4); }
+html.nw-skins-enabled .modal.modal-skin-f1 .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
+html.nw-skins-enabled .modal.modal-skin-f1 .m-search { background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.25); color: rgb(45,30,27); }
+html.nw-skins-enabled .modal.modal-skin-f1 .m-search::placeholder { color: rgba(45,30,27,0.4); }
 
 /* 新增/編輯/刪除工具列按鈕（對應 n_btn_new/edit/delete.png），
    panel-h.js 等價的 F1 面板實作還沒有這三顆按鈕的真實 DOM/功能，
    這裡先把 class 定義好、素材接上，等 F1 面板實作那三個功能時
    直接套用這幾個 class 就有對應美術，不用另外再裁圖。 */
-.modal.modal-skin-f1.skin-ready .n-btn-new,
-.modal.modal-skin-f1.skin-ready .n-btn-edit,
-.modal.modal-skin-f1.skin-ready .n-btn-delete {
+html.nw-skins-enabled .modal.modal-skin-f1 .n-btn-new,
+html.nw-skins-enabled .modal.modal-skin-f1 .n-btn-edit,
+html.nw-skins-enabled .modal.modal-skin-f1 .n-btn-delete {
   background-size: contain; background-position: center; background-repeat: no-repeat;
   border: none; font-size: 0; background-color: transparent;
 }
-.modal.modal-skin-f1.skin-ready .n-btn-new    { background-image: url('assets/panel-art/n_btn_new.png'); }
-.modal.modal-skin-f1.skin-ready .n-btn-edit   { background-image: url('assets/panel-art/n_btn_edit.png'); }
-.modal.modal-skin-f1.skin-ready .n-btn-delete { background-image: url('assets/panel-art/n_btn_delete.png'); }
+html.nw-skins-enabled .modal.modal-skin-f1 .n-btn-new    { background-image: url('assets/panel-art/n_btn_new.png'); }
+html.nw-skins-enabled .modal.modal-skin-f1 .n-btn-edit   { background-image: url('assets/panel-art/n_btn_edit.png'); }
+html.nw-skins-enabled .modal.modal-skin-f1 .n-btn-delete { background-image: url('assets/panel-art/n_btn_delete.png'); }
 
 
 /* ── L：協作大廳（對應 F2 鍵，美術素材前綴 l_，commit 紀錄／房間列表，
    本質是條列式清單）─────────────────────────────────────────────── */
 .modal.modal-skin-f2 {
-  --nw-body: #f5ecd9;
-  --nw-badge-url: url('assets/panel-art/l_badge.png');
-  --nw-close-url: url('assets/panel-art/l_close.png');
+  --nw-body: var(--nw-body-f2, #f5ecd9);
+  --nw-badge-url: var(--nw-badge-url-f2, url('assets/panel-art/l_badge.png'));
+  --nw-close-url: var(--nw-close-url-f2, url('assets/panel-art/l_close.png'));
 }
 
-.modal.modal-skin-f2.skin-ready .m-cat { background: rgba(255,255,255,0.35); border: 1px solid rgba(120,84,40,0.18); }
-.modal.modal-skin-f2.skin-ready .m-cat:hover { background: rgba(255,255,255,0.55); }
-.modal.modal-skin-f2.skin-ready .m-cat.active {
+html.nw-skins-enabled .modal.modal-skin-f2 .m-cat { background: rgba(255,255,255,0.35); border: 1px solid rgba(120,84,40,0.18); }
+html.nw-skins-enabled .modal.modal-skin-f2 .m-cat:hover { background: rgba(255,255,255,0.55); }
+html.nw-skins-enabled .modal.modal-skin-f2 .m-cat.active {
   background: rgba(59,104,148,0.15); border-color: #3b6894; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
-.modal.modal-skin-f2.skin-ready .m-cat-lbl { color: rgba(45,30,27,0.68); }
-.modal.modal-skin-f2.skin-ready .m-cat.active .m-cat-lbl { color: #2c5a86; font-weight: 700; }
+html.nw-skins-enabled .modal.modal-skin-f2 .m-cat-lbl { color: rgba(45,30,27,0.68); }
+html.nw-skins-enabled .modal.modal-skin-f2 .m-cat.active .m-cat-lbl { color: #2c5a86; font-weight: 700; }
 
-.modal.modal-skin-f2.skin-ready .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
-.modal.modal-skin-f2.skin-ready .m-search { background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.25); color: rgb(45,30,27); }
-.modal.modal-skin-f2.skin-ready .m-search::placeholder { color: rgba(45,30,27,0.4); }
+html.nw-skins-enabled .modal.modal-skin-f2 .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
+html.nw-skins-enabled .modal.modal-skin-f2 .m-search { background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.25); color: rgb(45,30,27); }
+html.nw-skins-enabled .modal.modal-skin-f2 .m-search::placeholder { color: rgba(45,30,27,0.4); }
 
 /* commit 紀錄是一條一條的清單：hud-panels.js 的 f2() 目前是直接用
    inline style 排成 flex row（不是走 .m-item-grid），這裡蓋掉 hud.css
    給 .m-item 預設的卡片背景/邊框，改成邊緣透明、只留一條底部分隔線。 */
-.modal.modal-skin-f2.skin-ready .m-item {
+html.nw-skins-enabled .modal.modal-skin-f2 .m-item {
   background: transparent !important; border: none !important;
   border-bottom: 1px solid rgba(120,84,40,0.12) !important;
 }
-.modal.modal-skin-f2.skin-ready .m-item:hover { background: rgba(59,104,148,0.06) !important; }
-.modal.modal-skin-f2.skin-ready .m-item-name { color: rgb(45,30,27) !important; }
+html.nw-skins-enabled .modal.modal-skin-f2 .m-item:hover { background: rgba(59,104,148,0.06) !important; }
+html.nw-skins-enabled .modal.modal-skin-f2 .m-item-name { color: rgb(45,30,27) !important; }
 
-.modal.modal-skin-f2.skin-ready .m-detail { background: rgba(255,255,255,0.4); border-left: 1px solid rgba(120,84,40,0.15); }
-.modal.modal-skin-f2.skin-ready .m-detail-name { color: rgb(45,30,27); }
-.modal.modal-skin-f2.skin-ready .m-attr-text { color: rgb(45,30,27); }
-.modal.modal-skin-f2.skin-ready .m-detail-desc { color: rgba(45,30,27,0.75); }
+html.nw-skins-enabled .modal.modal-skin-f2 .m-detail { background: rgba(255,255,255,0.4); border-left: 1px solid rgba(120,84,40,0.15); }
+html.nw-skins-enabled .modal.modal-skin-f2 .m-detail-name { color: rgb(45,30,27); }
+html.nw-skins-enabled .modal.modal-skin-f2 .m-attr-text { color: rgb(45,30,27); }
+html.nw-skins-enabled .modal.modal-skin-f2 .m-detail-desc { color: rgba(45,30,27,0.75); }
 
 /* 房間狀態徽章（等待中/進行中/已滿/已鎖定）——語意色，比照 NDL §2.4，
    不做成圖片，跟 NUG「狀態語意固定不跟主題走」的原則一致，這幾個顏色
-   不受載入狀態影響，本來就是固定語意色，不掛 .skin-ready。 */
+   不受風格套用狀態影響，本來就是固定語意色，不掛 html.nw-skins-enabled 限定。 */
 .modal.modal-skin-f2 .l-status {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 10px; padding: 2px 8px; border-radius: 999px; font-weight: 700;

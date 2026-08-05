@@ -63,6 +63,28 @@ function applyTheme(t) {
   if(a.minimap){const img=document.getElementById('mm-img'),svg=document.getElementById('mm-svg');img.src=a.minimap;img.onload=()=>{img.classList.add('on');if(svg)svg.style.display='none';};}
   if(a.keys)Object.entries(a.keys).forEach(([k,s])=>{const img=document.getElementById('hki-'+k);if(img&&s){img.src=s;img.onload=()=>img.classList.add('on');}});
   if(a.avatars)Object.entries(a.avatars).forEach(([i,s])=>{const img=document.getElementById('avi-'+i);if(img&&s){img.src=s;img.onload=()=>img.classList.add('on');}});
+
+  // panelSkins（選填）：B/H/F1/F2 這幾個面板的美術皮膚（見 panel-skins.css
+  // / docs/design-system/NWL.md）。這是跟上面 accent/bg/keys/avatars 同一
+  // 個 theme.json 底下的另一個選填區塊——沒有這個欄位（目前 default/
+  // gamification/cyber 三個內建主題都沒有）就完全不啟用，B/H/F1/F2 維持
+  // 跟 F3/F4 一樣的預設深色科技風；只有 theme.json 明確給了
+  // panelSkins.enabled === true，這幾個面板才會換成皮膚配色跟角落圖示。
+  // 不是「圖片有沒有載入完成」在決定要不要換，是「目前套用的風格有沒有
+  // 定義這個功能」在決定，跟其他主題資源（key 圖示／頭像）的套用邏輯
+  // 一致，不是另外發明一套獨立機制。
+  const ps = t.panelSkins;
+  root.classList.toggle('nw-skins-enabled', !!(ps && ps.enabled));
+  if (ps && ps.enabled) {
+    if (ps.trimTop)  root.style.setProperty('--nw-trim-top', ps.trimTop);
+    if (ps.trimSide) root.style.setProperty('--nw-trim-side', ps.trimSide);
+    if (ps.text)     root.style.setProperty('--nw-text', ps.text);
+    Object.entries(ps.panels || {}).forEach(([id, p]) => {
+      if (p.body)  root.style.setProperty(`--nw-body-${id}`, p.body);
+      if (p.badge) root.style.setProperty(`--nw-badge-url-${id}`, `url(${p.badge})`);
+      if (p.close) root.style.setProperty(`--nw-close-url-${id}`, `url(${p.close})`);
+    });
+  }
 }
 
 async function loadThemeFromServer(id, opts) {
@@ -87,6 +109,7 @@ function clearAll() {
   ['f1','f2','f3','f4','f5','b','h','m','esc'].forEach(k=>{const i=document.getElementById('hki-'+k);if(i){i.src='';i.classList.remove('on');}});
   [0,1,2].forEach(n=>{const i=document.getElementById('avi-'+n);if(i){i.src='';i.classList.remove('on');}});
   objectUrls.forEach(URL.revokeObjectURL);objectUrls=[];
+  document.documentElement.classList.remove('nw-skins-enabled');
   toast('已清除所有自訂資源');
 }
 

@@ -66,6 +66,19 @@ assets/themes/
     "minimap":   "雷達圖路徑",
     "keys": { "f1": "...", "f2": "...", ... },
     "avatars": { "0": "...", "1": "...", "2": "..." }
+  },
+  "panelSkins": {
+    "__comment": "選填。B/H/F1/F2 四個面板的美術皮膚開關，見 docs/design-system/NWL.md §2。不填這個欄位（目前 default/gamification/cyber 都沒填）時，這四個面板開啟時會跟 F3/F4 一樣是預設深色科技風；只有 enabled 明確是 true，才會套用下面的顏色/圖片。",
+    "enabled":  "true 才會啟用，其他情況（缺欄位／false）視為不啟用",
+    "trimTop":  "四個面板共用的邊條標題列色，例如 '#2c5c8f'",
+    "trimSide": "四個面板共用的邊條滾邊色，例如 '#c9a86a'",
+    "text":     "四個面板套用皮膚後的文字色，例如 'rgb(45,30,27)'",
+    "panels": {
+      "b":  { "body": "背包內容區底色", "badge": "左上角落圖示路徑", "close": "關閉鈕圖示路徑" },
+      "h":  { "body": "...", "badge": "...", "close": "..." },
+      "f1": { "body": "...", "badge": "...", "close": "..." },
+      "f2": { "body": "...", "badge": "...", "close": "..." }
+    }
   }
 }
 ```

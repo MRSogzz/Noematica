@@ -38,6 +38,10 @@
       "2":          "assets/themes/default/avatars/avatar-2.png"
     }
   },
+  "panelSkins": { 
+	"enabled": true, "trimTop": "#2c5c8f", "trimSide": "#c9a86a", "text": "rgb(45,30,27)",
+	"panels": { "b": {"body":"#f6ecd9","badge":"assets/panel-art/b_badge.png","close":"assets/panel-art/b_close.png"}} 
+  },
   "layout": {
     "minimapSize":  130,
     "keyBtnSize":   44,

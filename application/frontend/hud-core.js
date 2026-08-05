@@ -83,26 +83,6 @@ const PANEL_TITLES = {
 
 const $ = id => document.getElementById(id);
 
-// 皮膚圖片素材（角落徽章／關閉鈕）預先載入用的路徑表，跟
-// panel-skins.css 裡 --nw-badge-url/--nw-close-url 用的是同一組檔案。
-const SKIN_CORNER_ASSETS = {
-  b:  ['assets/panel-art/b_badge.png', 'assets/panel-art/b_close.png'],
-  h:  ['assets/panel-art/h_badge.png', 'assets/panel-art/h_close.png'],
-  f1: ['assets/panel-art/n_badge.png', 'assets/panel-art/n_close.png'],
-  f2: ['assets/panel-art/l_badge.png', 'assets/panel-art/l_close.png'],
-};
-
-// 預先載入一批圖片，全部處理完（不管成功失敗）才 resolve——失敗也要
-// resolve，不能讓一張圖載入失敗就讓皮膚永遠卡在「還沒 ready」的狀態。
-function preloadImages(urls) {
-  return Promise.all(urls.map(url => new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => resolve(true);
-    img.onerror = () => resolve(false);
-    img.src = url;
-  })));
-}
-
 function openModal(id) {
   document.querySelectorAll('.hk').forEach(b => b.classList.remove('active'));
   $('hkb-' + id)?.classList.add('active');
@@ -116,30 +96,29 @@ function openModal(id) {
   // 尺寸完全不受這套皮膚影響——三者用的是 hud.css 同一份 .modal 基礎
   // 樣式（92vw/90vh、深色科技風），這份檔案自始至終都沒有覆寫過尺寸。
   //
-  // 圖片不能影響設計：掛上 modal-skin-<id>/nw-frame 的當下，面板長得
-  // 跟 F3/F4 完全一樣（deep-tech 深色殼），只有等角落圖示（徽章／
-  // 關閉鈕）確認預載完成後，才會多掛一個 .skin-ready，這時候
-  // panel-skins.css 裡幾乎所有跟顏色/圖片有關的規則才會生效。這樣
-  // 不管圖片載入快慢、成功失敗，介面在任何時間點都是一個「完整的
-  // 樣子」，不會有版面跑掉或顏色跟圖片各自到位時間不一致的中間態。
+  // 這幾個 class 只負責標記「這是哪個面板、走 Grid 還是 List」，不代表
+  // 皮膚外觀就會生效——外觀是否套用完全由 <html> 上有沒有
+  // .nw-skins-enabled 這個 class 決定（見 panel-skins.css 的
+  // `html.nw-skins-enabled .modal.nw-frame` 系列規則），而
+  // .nw-skins-enabled 只有在目前套用的 theme.json 明確定義了
+  // panelSkins.enabled === true 時才會被 hud-utils.js 的 applyTheme()
+  // 加上去（見該檔案）。沒有套用這種主題（例如目前預設的 default 主題）
+  // 就完全不會有 .nw-skins-enabled，B/H/F1/F2 開啟時會跟 F3/F4 一樣是
+  // 純粹的深色科技風，不是「圖片有沒有載入完成」在決定要不要換色，是
+  // 「有沒有套用定義了這個功能的風格」在決定——這是跟第四版
+  // （image-preload + skin-ready）的差異，那一版因為角落圖示是固定
+  // bundled 在 repo 裡、幾乎瞬間就載入完成，實際上等於「不管有沒有套用
+  // 風格都強制換色」，不符合「風格沒套用就該是原本樣子」的需求，這版
+  // 改成真正掛勾到主題系統。
   const modalEl = $('modal');
-  modalEl.classList.remove('modal-skin-b', 'modal-skin-h', 'modal-skin-f1', 'modal-skin-f2', 'nw-frame', 'nw-list', 'skin-ready');
+  modalEl.classList.remove('modal-skin-b', 'modal-skin-h', 'modal-skin-f1', 'modal-skin-f2', 'nw-frame', 'nw-list');
   const isSkinned = ['b', 'h', 'f1', 'f2'].includes(id);
   if (isSkinned) {
     modalEl.classList.add('modal-skin-' + id, 'nw-frame');
     // F1/F2 是條列式清單（筆記/commit 紀錄），不是挑格子的情境，額外
-    // 掛 .nw-list 啟用單欄橫列清單樣式（同樣要等 .skin-ready 才生效，
-    // 載入完成前跟 F3/F4 一樣是預設方格）；B 是背包道具，維持方格清單，
-    // 不掛這個 class。
+    // 掛 .nw-list 啟用單欄橫列清單樣式（同樣只有 .nw-skins-enabled 時
+    // 才生效）；B 是背包道具，維持方格清單，不掛這個 class。
     if (id === 'f1' || id === 'f2') modalEl.classList.add('nw-list');
-    preloadImages(SKIN_CORNER_ASSETS[id]).then(() => {
-      // 使用者可能在圖片載入完成前已經切到別的面板，這裡再檢查一次
-      // 目前開著的還是不是同一個面板，避免圖片載入完成時錯誤地把
-      // .skin-ready 加到已經換成別的面板的 .modal 上。
-      if ($('modal').classList.contains('modal-skin-' + id)) {
-        modalEl.classList.add('skin-ready');
-      }
-    });
   }
 
   // 重置詳情欄
