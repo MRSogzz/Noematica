@@ -1,7 +1,9 @@
 uid	name	domains	aliases	type
+absolute_position	絕對位置	positional_encoding_mechanism	Absolute Position	Concept
 backpropagation	反向傳播	Training	Backpropagation	Optimization_Algorithm
 bank_net_interest_margin	銀行淨利差	macro,finance	NIM,銀行獲利,淨息差	macro_variable
 cross_entropy_loss	交叉熵損失函數	Training	Cross-Entropy Loss	Loss_Function
+differentiable_matrix_multiplication	可導的矩陣相乘	word_embedding	Differentiable Matrix Multiplication	Mechanism
 dropout	丟棄法	Deep Learning,Regularization	隨機停用神經元	Technique
 fed_funds_rate	聯邦基金利率	macro,finance	FFR,美國基準利率,聯準會利率	macro_variable
 generalization_ability	泛化能力	Model Performance	過擬合的對立面	Metric
@@ -10,14 +12,19 @@ gradient_propagation	梯度傳遞	Optimization,Backpropagation	梯度消失	Proc
 greedy_decoding	貪婪解碼	Inference	Greedy Decoding	Sampling_Strategy
 inference_phase	推理階段	Model_Operation	Inference	Phase
 large_ai_model	大型人工智慧模型	Artificial Intelligence,Deep Learning	AI Model	Concept
+learned_positional_encoding	訓練學習的位置編碼	positional_encoding_mechanism	Learned Positional Encoding	Method
 normalization	正規化	Deep Learning,Optimization	Batch Normalization,批次正規化	Technique
 overfitting	過擬合	Model Performance	資料過擬合	Problem
 positional_encoding_mechanism	位置編碼機制	nlp,deep_learning	位置編碼,Positional Encoding,位置向量,Positional Embedding	concept
 prediction_accuracy	預測準確度	Performance	Accuracy	Metric
 prediction_error	預測誤差	Training	Loss	Metric
 probability_distribution	機率分布	Inference	Token Probability Distribution	Data_Structure
+relative_position	相對位置	positional_encoding_mechanism	Relative Position	Concept
 residual_connection	殘差連接	Deep Learning,Architecture	Skip Connection,捷徑連接	Technique
+rope_encoding	RoPE（旋轉位置編碼）	positional_encoding_mechanism	RoPE	Method
+sinusoidal_encoding	正弦與餘弦波編碼	positional_encoding_mechanism	Sinusoidal Encoding	Method
 temperature	Temperature	Inference	溫度係數	Sampling_Parameter
+token_embedding	詞元向量	Word Embedding	Token Embedding	Component
 top_k_sampling	Top-K 抽樣	Inference	Top-K Sampling	Sampling_Strategy
 top_p_sampling	Top-P 抽樣	Inference	Nucleus Sampling	Sampling_Strategy
 training_phase	訓練階段	Model_Operation	Training	Phase
