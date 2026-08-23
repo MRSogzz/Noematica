@@ -25,6 +25,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # runtime/
 from common import find_repo_root  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "activation"))
 import activation_engine as ae  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "plugins"))
+from latent_provider import get_provider  # noqa: E402
 
 
 def build_prompt(user_query: str, belief: dict) -> str:
@@ -88,11 +90,25 @@ def call_llm(prompt: str) -> dict:
     return {"dry_run": False, "prompt": prompt, "response": text}
 
 
-def reason(repo_root: Path, query: str, context: dict, atom: str | None = None) -> dict:
+def reason(repo_root: Path, query: str, context: dict, atom: str | None = None,
+           ai_config: dict | None = None) -> dict:
     activation_result = ae.activate(repo_root, query=query, atom=atom, context=context)
     belief = ae.to_belief_contract(activation_result)
     prompt = build_prompt(query, belief)
-    llm_result = call_llm(prompt)
+
+    # LatentProvider hook：get_provider() 在沒有任何 J-space 類插件註冊時
+    # 回傳 None，這裡就直接走原本 call_llm(prompt)，跟裝插件前逐字元一致。
+    provider = get_provider()
+    intervention = None
+    if provider is not None:
+        intervention = provider.build_intervention(query, belief)
+        llm_result = provider.apply(prompt, intervention, ai_config)
+        llm_result.setdefault("provider", provider.name)
+        llm_result.setdefault("activation_intervention",
+                               provider.supports_activation_intervention() if intervention else False)
+    else:
+        llm_result = call_llm(prompt)
+
     return {"belief": belief, "llm": llm_result}
 
 

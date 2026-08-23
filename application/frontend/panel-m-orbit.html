@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <title>M · 認知地圖 — Activation Orbit</title>
 <script src="theme-boot.js"></script>
+<!-- 前端插件擴充點：任何實作 LatentProvider 的後端插件，回傳的
+     belief.plugin 都會被這個共用元件自動渲染 -->
+<script src="panel-components/plugin-badge.js"></script>
 <style>
     :root {
         /* 命名法：跟 theme-boot.js 設的共用變數「同名」的（--accent/--text/--border/
@@ -178,6 +181,26 @@
     .reasoning-path .rp-arrow { color: var(--text-faint); margin: 0 4px; }
     .reasoning-empty { font-size: 11px; color: var(--text-faint); }
 
+    /* ===== Ask（問系統一個問題，在 #explain 裡面，同一個 grid-area）===== */
+    #ask-box { border-top: 1px solid var(--border); padding-top: 4px; }
+    .ask-hint { font-size: 10px; color: var(--text-faint); margin-bottom: 6px; }
+    #ask-input {
+        width: 100%; box-sizing: border-box; resize: vertical; font: inherit; font-size: 12px;
+        background: var(--bg); color: var(--text); border: 1px solid var(--border);
+        border-radius: 6px; padding: 8px; margin-bottom: 6px;
+    }
+    .ask-submit {
+        font-size: 11px; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border);
+        background: var(--panel); color: var(--text); cursor: pointer;
+    }
+    .ask-submit:hover { border-color: var(--medium); }
+    .ask-use-focus {
+        font-size: 9px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border);
+        background: transparent; color: var(--text-faint); cursor: pointer; margin-left: 6px;
+    }
+    .ask-use-focus:hover { color: var(--text); border-color: var(--medium); }
+    #ask-result { margin-top: 10px; }
+
     /* ===== Timeline（底部）===== */
     #timeline { grid-area: timeline; background: var(--panel); border-top: 1px solid var(--border); padding: 10px 16px; overflow-x: auto; }
     #timeline-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint); margin-bottom: 8px; }
@@ -303,6 +326,19 @@
     <div id="explain">
         <h3>Runtime</h3>
         <div id="explain-body"><div class="reasoning-empty">選一個實體看看系統怎麼判斷它。</div></div>
+
+        <div id="ask-box">
+            <h3 style="margin-top:18px;">問系統一個問題</h3>
+            <div class="ask-hint" id="ask-hint">目前焦點：<span id="ask-focus-name">（未選取實體）</span>
+                <button class="ask-use-focus" onclick="useFocusAsQuery()" title="把輸入框換成焦點實體的名稱，保證命中比對">帶入焦點名稱</button>
+            </div>
+            <div class="ask-hint" style="opacity:.75">系統目前用「子字串比對」找 Entity：你打的整段文字必須完整包含在
+                某個 Entity 的名稱／uid／別名裡面才會命中，不是自然語言問答比對——
+                打太長的句子通常會直接棄權（no_matching_atom）。</div>
+            <textarea id="ask-input" rows="2" placeholder="輸入知識庫裡實際存在的實體名稱或關鍵字…"></textarea>
+            <button class="ask-submit" id="ask-submit-btn" onclick="askSystem()">送出</button>
+            <div id="ask-result"></div>
+        </div>
     </div>
 
     <div id="timeline">
@@ -424,6 +460,8 @@ async function loadOrbit(uid, { isNewSearch = false } = {}) {
         document.getElementById('orbit-status').classList.add('hidden');
         document.getElementById('orbit-layer-badge').textContent = `Layer 0–${data.layers.length - 1}`;
         document.getElementById('queue-focus-name').textContent = data.center.name;
+        const askFocusEl = document.getElementById('ask-focus-name');
+        if (askFocusEl) askFocusEl.textContent = data.center.name;
         renderQueue(data.queue);
     } catch (e) {
         document.getElementById('orbit-status-msg').innerHTML =
@@ -568,6 +606,68 @@ async function loadExplain(uid) {
         body.innerHTML = `<div class="er-err">載入失敗：${escapeHtml(e.message)}</div>`;
     }
 }
+
+function useFocusAsQuery() {
+    const focusName = (document.getElementById('ask-focus-name')?.textContent || '').trim();
+    if (!focusName || focusName === '（未選取實體）') return;
+    document.getElementById('ask-input').value = focusName;
+}
+window.useFocusAsQuery = useFocusAsQuery;
+
+async function askSystem() {
+    const input = document.getElementById('ask-input');
+    const btn = document.getElementById('ask-submit-btn');
+    const result = document.getElementById('ask-result');
+    const query = input.value.trim();
+    if (!query) return;
+
+    // 注意：activation_engine.find_candidate_entities() 的比對方向是
+    // 「你打的整段查詢文字必須是某個 Entity 的 name/uid/alias 的子字串」
+    // （程式碼是 `query in entity_name`，不是反過來）。所以這裡完全不去
+    // 動使用者打的文字——把焦點實體名稱硬塞進去只會讓查詢變長、更難符合
+    // 子字串比對（先前一版錯誤地這樣做過）。要保證命中焦點實體，請按旁邊
+    // 「帶入焦點名稱」按鈕，把輸入框直接換成實體名稱本身再送出。
+    // Query Contract 的 atom 欄位是精確指定「某一條 Atom（關係）」用的，
+    // 焦點是 Entity uid，兩者是不同 id 命名空間，這裡不帶這個欄位。
+    btn.disabled = true;
+    result.innerHTML = '<div class="reasoning-empty">送出中…</div>';
+    try {
+        const res = await fetch(API_BASE + '/api/epistemic/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query, context: {} }),
+        });
+        const belief = await res.json();
+        if (!res.ok) {
+            result.innerHTML = `<div class="er-err">查詢失敗：${escapeHtml(belief.error || res.statusText)}</div>`;
+            return;
+        }
+
+        const badge = (typeof PluginBadge === 'function') ? PluginBadge(belief.plugin) : '';
+
+        if (belief.abstained) {
+            result.innerHTML = `${badge}<div class="explain-abstain">系統棄權：${escapeHtml(belief.abstain_reason || '')}<br>目前證據不足以支撐可靠判斷（uncertainty ${belief.uncertainty}）。</div>`;
+            return;
+        }
+
+        const group = (label, cls, items) => {
+            if (!items || !items.length) return '';
+            return `<div class="explain-group-label ${cls}">${label}（${items.length}）</div>` +
+                items.map(o => `<div class="explain-obs">${escapeHtml(o.obs)} <span class="eo-conf">conf ${o.confidence ?? '—'}</span></div>`).join('');
+        };
+        result.innerHTML =
+            badge +
+            `<div class="explain-uncertainty">不確定性：${belief.uncertainty}</div>` +
+            group('Support', 'support', belief.support) +
+            group('Contradiction', 'contradiction', belief.contradiction) +
+            group('Baseline', 'baseline', belief.baseline);
+    } catch (e) {
+        result.innerHTML = `<div class="er-err">查詢失敗：${escapeHtml(e.message)}</div>`;
+    } finally {
+        btn.disabled = false;
+    }
+}
+window.askSystem = askSystem;
 
 async function loadReasoningPath() {
     const el = document.getElementById('reasoning-path-inline');

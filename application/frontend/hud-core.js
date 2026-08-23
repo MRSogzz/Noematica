@@ -3,13 +3,19 @@
    API helper / Modal controller / 三欄 render helpers
    ============================================================ */
 
-const API = 'http://localhost:3001';
-// api() 使用 window.API_OVERRIDE（來自設定）或預設值
-function getAPIBase() { return window.API_OVERRIDE || API; }
-
 // ── HUD Token ─────────────────────────────────────────────────────────────────
-// 用於所有 mutation 請求（POST write / DELETE）的身份驗證 header。
-// Token 由後端啟動時產生（或從 .env HUD_TOKEN 讀取），首次使用時貼入即可。
+// getHudToken()/setHudToken() 保留在這裡（不是死碼）：hud-settings.js 的
+// 設定面板還在直接呼叫這兩個函式讀寫 token 輸入框。實際發 API 請求的
+// token 處理邏輯已經統一到 api/rest-client.js（包含它自己的
+// getHudToken/setHudToken/promptToken 實作，故意沒有互相 import，見該檔案
+// 開頭註解），這裡只是「設定畫面要顯示/寫入 token」這個單純的 UI 需求，
+// 兩份小函式重複比硬要跨 classic script／ES module 邊界共用更簡單可靠。
+//
+// 原本這裡還有 api()/getAPIBase()/promptToken()/MUTATION_METHODS——那是
+// 舊版「所有面板共用同一個全域 api() 函式打 API」的做法，8 個面板全部
+// 遷移成 Container/View 架構、改用 api/rest-client.js 的 restClient 之後，
+// 已經沒有任何地方呼叫這個 api()（唯一剩下的呼叫者 hud-utils.js 的
+// loadQuests() 也已經改用不需要 token 的原生 fetch()），所以整段刪掉了。
 
 const TOKEN_KEY = 'llm-wiki-hud-token';
 
@@ -21,58 +27,6 @@ function setHudToken(token) {
   localStorage.setItem(TOKEN_KEY, token.trim());
 }
 
-/** 顯示 token 輸入提示（用於 401 回應時）*/
-function promptToken(retryFn) {
-  const current = getHudToken();
-  const input = prompt(
-    '後端要求驗證 Token（x-hud-token）。\n' +
-    '請查看後端啟動 terminal 取得 HUD_TOKEN，或在 .env 中設定後重啟。\n\n' +
-    '目前 Token：' + (current ? current.slice(0,8) + '…' : '（未設定）'),
-    current
-  );
-  if (input !== null) {
-    setHudToken(input);
-    if (typeof retryFn === 'function') retryFn();
-  }
-}
-
-// 需要 token 的 method
-const MUTATION_METHODS = new Set(['POST', 'DELETE', 'PATCH', 'PUT']);
-
-// ── API helper ────────────────────────────────────────────────────────────────
-
-async function api(path, opts = {}) {
-  const method = (opts.method || 'GET').toUpperCase();
-  const headers = { ...(opts.headers || {}) };
-
-  // 寫入 / 刪除操作自動帶 token
-  if (MUTATION_METHODS.has(method)) {
-    const token = getHudToken();
-    if (token) headers['x-hud-token'] = token;
-  }
-
-  try {
-    const res  = await fetch(getAPIBase() + path, { ...opts, headers });
-    const json = await res.json();
-    if (res.status === 401) {
-      // Token 錯誤 → 提示使用者輸入，不丟出原始錯誤以免誤導
-      promptToken(() => api(path, opts));
-      throw new Error('請輸入正確的 HUD Token 後重試');
-    }
-    if (!res.ok) throw new Error(json.error || res.statusText);
-    return json;
-  } catch (e) {
-    throw e;
-  }
-}
-
-function spinner() {
-  return '<div class="p-spinner"><div class="spin"></div>載入中…</div>';
-}
-function errMsg(e) {
-  return `<div class="p-err">⚠ 無法連線後端：${e.message}<br>請確認 <code>npm run dev</code> 已啟動（port 3001）</div>`;
-}
-
 // ── Modal 三欄控制器 ──────────────────────────────────────────────────────────
 
 const PANEL_TITLES = {
@@ -80,6 +34,11 @@ const PANEL_TITLES = {
   f4:'目標專案時程', f5:'知識圖鑑', b:'模組背包 — I/O 週期表',
   h:'AI 知識整理', m:'認知地圖 — Activation Orbit'
 };
+// registry/panel-registry.js 是 ES module，讀不到 classic script 這裡用
+// const 宣告的全域變數（const/let 不會變成 window 的屬性，只有 var／
+// function 宣告會），所以額外掛一份到 window 上，單一事實來源仍然是
+// 上面這個物件，這裡只是讓它「也」能被 module 讀到。
+window.PANEL_TITLES = PANEL_TITLES;
 
 const $ = id => document.getElementById(id);
 
@@ -130,23 +89,42 @@ function openModal(id) {
   $('m-detail-actions').style.display = 'none';
 
   const body = $('modal-body');
-  if (id === 'f3') {
-    body.classList.add('fullwidth');
-    $('m-grid-wrap').innerHTML = `<iframe src="panel-tests.html" style="width:100%;height:100%;border:none;display:block;" title="F3 測試面板"></iframe>`;
-    $('m-sidebar').innerHTML   = '';
-    $('m-toolbar').innerHTML   = '';
-  } else if (id === 'm') {
-    body.classList.add('fullwidth');
+
+  // FULLWIDTH_PANELS：內容區自己管版面（不用共用三欄 sidebar/toolbar/detail）
+  // 的面板。M 目前仍是真正的 iframe 注入（Three.js/canvas 為主、版面
+  // 跟其他面板差異太大，不勉強塞進共用 Shell）；F3 已經改成跟其他 6 個
+  // 面板一樣走 registry 的 mount()，只是它的內容（<f3-workspace> Web
+  // Component，見 components/f3-workspace.js）自己用 Shadow DOM 管版面跟
+  // 樣式隔離，共用的只有最外層的 modal-title/關閉鈕。
+  const FULLWIDTH_PANELS = ['f3', 'm'];
+  body.classList.toggle('fullwidth', FULLWIDTH_PANELS.includes(id));
+
+  if (id === 'm') {
+    // M 是唯一還走 iframe 注入的面板。
     $('m-grid-wrap').innerHTML = `<iframe src="panel-m-orbit.html" style="width:100%;height:100%;border:none;display:block;" title="M 認知地圖"></iframe>`;
     $('m-sidebar').innerHTML   = '';
     $('m-toolbar').innerHTML   = '';
-  } else {
-    body.classList.remove('fullwidth');
+  } else if (id === 'f3') {
+    // F3 不注入 iframe，內容交給下面的 registry mount()，這裡只需要清空
+    // 共用三欄（<f3-workspace> 自己管版面，不需要 m-sidebar/m-toolbar）。
+    $('m-sidebar').innerHTML = '';
+    $('m-toolbar').innerHTML = '';
   }
 
   $('backdrop').classList.add('open');
   $('modal').classList.add('open');
-  PANELS[id]();
+
+  // 新的 Panel Registry（registry/panel-registry.js）優先——F1/F2/F3/F4/F5/
+  // B/H 都已經遷移過去，M 是唯一還沒登記的（因為它走上面的 iframe 分支，
+  // 不需要 mount()）。
+  import('./registry/panel-registry.js').then(({ hasContainer, PANEL_REGISTRY }) => {
+    if (id === 'm') return; // 已經用 iframe 注入了，不用再走 mount()/PANELS
+    if (hasContainer(id)) {
+      PANEL_REGISTRY[id].mount($('m-grid-wrap'));
+    } else {
+      PANELS[id]();
+    }
+  });
 }
 
 function closeModal() {
@@ -208,8 +186,8 @@ function renderDetail({ icon, name, tag, attrs, desc, actions }) {
   }
 }
 
-function errGrid(e) {
-  renderGrid(`<div class="m-empty"><div class="m-empty-icon">⚠</div><div style="font-size:11px;text-align:center">無法連線後端<br><span style="opacity:.5">${e.message}</span><br><br><span style="opacity:.35;font-size:10px">npm run dev → port 3001</span></div></div>`);
-}
+// errGrid() 原本是舊版 catch(e){ errGrid(e); } 模式在用，8 個面板全部
+// 遷移成 Container/View 架構、改用 <panel-shell state="error"> 之後，
+// 已經沒有任何呼叫者，刪掉了。
 
 // ── PANELS ────────────────────────────────────────────────────────────────────

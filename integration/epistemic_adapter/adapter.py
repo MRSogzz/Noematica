@@ -63,7 +63,22 @@ def handle_query(payload: dict) -> dict:
     )
     belief = result["belief"]
     jsonschema.validate(instance=belief, schema=_BELIEF_SCHEMA)
-    return belief
+
+    # 通用的插件資訊，不專屬 J-space——任何實作了 runtime/plugins/latent_provider.py
+    # 裡 LatentProvider 介面的插件都會反映在這裡。belief_contract.schema.json 沒有
+    # additionalProperties:false，所以多這個欄位不影響上面那行驗證的嚴格性，也不會
+    # 破壞任何原本只認 support/contradiction/uncertainty/abstained 這幾個欄位的 client。
+    # active=False 時（沒裝任何插件，或裝了但這次沒觸發 intervention），前端就不用
+    # 顯示任何插件相關 UI——這是「有插件才長出來」的同一套原則，跟 theme.json 的
+    # panelSkins/fonts 是一致的設計語言。
+    llm = result.get("llm") or {}
+    response = dict(belief)
+    response["plugin"] = {
+        "provider": llm.get("provider"),                              # 有沒有裝插件（None＝完全沒裝）
+        "intervened": bool(llm.get("intervened")),                    # 這次是否真的建立並套用了 intervention
+        "activation_intervention": bool(llm.get("activation_intervention")),  # 是否為「真」latent 介入（非文字模擬）
+    }
+    return response
 
 
 def handle_feedback(payload: dict) -> dict:

@@ -5,7 +5,14 @@
 
 async function loadQuests() {
   try {
-    const data = await api('/api/milestones');
+    // 原本是 api('/api/milestones')，hud-core.js 那個舊版 api() 已經被
+    // api/rest-client.js 取代並刪除（見該檔案的說明）。這裡是唯一一個
+    // GET-only、不需要 token 的呼叫，改用原生 fetch() 最直接，不用為了
+    // 一個讀取請求載入整套 restClient（module 動態 import 有非同步時機
+    // 考量，這裡是頁面一開始就同步呼叫的，用原生 fetch 最單純可靠）。
+    const base = window.API_OVERRIDE || 'http://localhost:3001';
+    const res = await fetch(base + '/api/milestones');
+    const data = await res.json();
     const ms   = (data.milestones || []).slice(0, 3);
     ms.forEach((m, i) => {
       const qi = document.getElementById('q' + i);
@@ -84,6 +91,29 @@ function applyTheme(t) {
       if (p.badge) root.style.setProperty(`--nw-badge-url-${id}`, `url(${p.badge})`);
       if (p.close) root.style.setProperty(`--nw-close-url-${id}`, `url(${p.close})`);
     });
+  }
+
+  // fonts（選填）：跟 panelSkins 同一套「有定義才套用」邏輯。沒有這個欄位
+  // （目前 default/gamification/cyber 都沒有）就完全不影響原本寫死在
+  // hud.css 裡的 'Noto Serif SC' / 'JetBrains Mono'——那兩個字型名稱已經
+  // 改成 var(--font-heading, 'Noto Serif SC') 這種「CSS 變數 + 原本的值當
+  // fallback」的寫法，所以舊主題什麼都不用改就跟以前長得一模一樣。
+  // googleFontsUrl 選填：要用 Caveat / Noto Serif TC 這類需要另外載入的
+  // 字型時，theme.json 給一個 Google Fonts 連結，這裡會動態插入 <link>。
+  const f = t.fonts;
+  if (f) {
+    if (f.heading) root.style.setProperty('--font-heading', f.heading);
+    if (f.body)    root.style.setProperty('--font-body', f.body);
+    if (f.mono)    root.style.setProperty('--font-mono', f.mono);
+    if (f.googleFontsUrl && !document.querySelector(`link[data-theme-font]`)) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = f.googleFontsUrl;
+      link.dataset.themeFont = 'true';
+      document.head.appendChild(link);
+    } else if (f.googleFontsUrl) {
+      document.querySelector('link[data-theme-font]').href = f.googleFontsUrl;
+    }
   }
 }
 

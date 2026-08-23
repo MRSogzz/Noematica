@@ -196,6 +196,19 @@
 
 <!-- ── Scripts（載入順序：core → panels → panel-h → utils → settings）─── -->
 <script src="hud-core.js"></script>
+<!-- Container/View 架構要用的共用 Web Component（PanelShell/PanelHeader） -->
+<script type="module" src="components/panel-shell.js"></script>
+<script type="module" src="components/panel-header.js"></script>
+<!-- 四層架構：Layout 層（排列/空狀態/響應式）-->
+<script src="layouts/grid-layout.js"></script>
+<script src="layouts/list-layout.js"></script>
+<!-- 四層架構：Component 層（單一格子/卡片長什麼樣）-->
+<script src="panel-components/slot-cell.js"></script>
+<script src="panel-components/milestone-card.js"></script>
+<script src="panel-components/note-card.js"></script>
+<script src="panel-components/commit-row.js"></script>
+<script src="panel-components/status-file-row.js"></script>
+<script src="panel-components/doc-item.js"></script>
 <script src="hud-panels.js"></script>
 <script src="panel-h.js"></script>
 <script src="hud-utils.js"></script>

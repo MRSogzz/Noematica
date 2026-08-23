@@ -1,14 +1,19 @@
 # 依照建議架構：epistemic/、knowledge/、runtime/policy/、integration/contracts/ 都要進 Git
 # （這些是「認知歷史」），只有下面這些執行期產物不進 Git：
-
+ 
 runtime/cache/
 epistemic/.index/runtime/
 logs/
+demo/
 
 # Python
 __pycache__/
 *.pyc
 .venv/
-
+ 
+# 環境變數（含 API key，只有 .env.example 進 repo）
+.env
+application/.env
+ 
 # OS junk
 .DS_Store

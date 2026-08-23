@@ -25,8 +25,24 @@ import logging
 import sys
 from pathlib import Path
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]  # integration/epistemic_adapter/ -> 上兩層
+
+# 讀 repo 根目錄的 .env（跟 application/.env 是分開的兩個檔案——Node 端從
+# application/ 這個 cwd 讀自己的 .env，Python 端的 script 慣例是從 repo 根目錄
+# 執行（find_repo_root(Path.cwd())），所以 .env 也放在根目錄，不會互相衝突）。
+# 沒裝 python-dotenv，或根目錄沒有 .env 檔，都只是安靜地跳過——這個 process
+# 原本就完全靠 shell 手動 export 也能跑，.env 只是多一個「不用每次重打」的選項。
+try:
+    from dotenv import load_dotenv
+    load_dotenv(_REPO_ROOT / ".env")
+except ImportError:
+    pass
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import adapter  # noqa: E402
+
+sys.path.insert(0, str(_REPO_ROOT / "runtime" / "plugins"))
+from loader import load_provider_from_env  # noqa: E402
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,6 +64,11 @@ def _internal_error(e: Exception) -> HTTPException:
     return HTTPException(status_code=500, detail=str(e))
 
 app = FastAPI(title="Epistemic Adapter", version="1.0.0")
+
+# 啟動時嘗試載入 LatentProvider 插件（見 runtime/plugins/loader.py 的說明）。
+# 沒設定 NOEMATICA_LATENT_PROVIDER，或插件根本沒裝，都只是印一行 log，
+# 服務照常啟動——這個 process 不應該因為一個外部插件的狀態而起不來。
+load_provider_from_env()
 
 # CORS：只允許本機來源，跟 Node 後端的 CORS_ORIGIN 預設策略一致
 app.add_middleware(

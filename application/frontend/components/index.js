@@ -10,3 +10,5 @@ export { ActivationBadge } from './activation-badge.js';
 export { StanceIcon } from './stance-icon.js';
 export { EntityCard } from './entity-card.js';
 export { EvidenceCard } from './evidence-card.js';
+export { PanelShell } from './panel-shell.js';
+export { PanelHeader } from './panel-header.js';

@@ -18,7 +18,7 @@
       --api:      http://localhost:3001;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #000; overflow: hidden; font-family: 'JetBrains Mono', monospace; }
+    body { background: #000; overflow: hidden; font-family: var(--font-mono, 'JetBrains Mono'), monospace; }
 
     /* HUD Root */
     .hud { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
@@ -61,7 +61,7 @@
     .task-item:hover { background: linear-gradient(to right, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.28) 88%, transparent 100%); }
     .task-gem { width: 12px; height: 12px; flex-shrink: 0; margin-top: 3px; border: 1.5px solid var(--accent); background: rgba(232,200,115,0.1); transform: rotate(45deg); transition: background .18s; }
     .task-gem.lit { background: var(--accent); }
-    .task-name { font-size: 12px; color: var(--text); font-family: 'Noto Serif SC', serif; font-weight: 700; line-height: 1.3; text-shadow: 0 1px 4px rgba(0,0,0,0.85); }
+    .task-name { font-size: 12px; color: var(--text); font-family: var(--font-heading, 'Noto Serif SC'), serif; font-weight: 700; line-height: 1.3; text-shadow: 0 1px 4px rgba(0,0,0,0.85); }
     .task-sub { display: flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 10px; color: var(--accent); }
     .task-arr { opacity: .6; font-size: 8px; }
 
@@ -92,7 +92,7 @@
     .cc:hover { transform: translateX(-4px); }
     .cc.active .cc-av { outline: 2px solid var(--accent); outline-offset: 1px; }
     .cc-info { text-align: right; padding: 5px 8px 5px 0; background: linear-gradient(to left, rgba(0,0,0,0.55), transparent); min-width: 88px; display: flex; flex-direction: column; justify-content: center; }
-    .cc-name { font-size: 12px; color: var(--text); font-family: 'Noto Serif SC', serif; font-weight: 700; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+    .cc-name { font-size: 12px; color: var(--text); font-family: var(--font-heading, 'Noto Serif SC'), serif; font-weight: 700; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
     .cc-hp { height: 3px; background: rgba(0,0,0,0.4); border-radius: 2px; overflow: hidden; margin-top: 4px; }
     .cc-hp-fill { height: 100%; border-radius: 2px; background: linear-gradient(to right, var(--hp-l), var(--hp-r)); }
     .cc-av { width: 52px; height: 52px; border-radius: 8px 0 0 8px; overflow: hidden; border: 1.5px solid rgba(255,255,255,0.24); border-right: none; background: rgba(30,40,60,0.8); box-shadow: -3px 0 10px rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; }
@@ -144,7 +144,7 @@
     }
     .modal-title {
       position: absolute; left: 50%; transform: translateX(-50%);
-      font-family: 'Noto Serif SC', serif;
+      font-family: var(--font-heading, 'Noto Serif SC'), serif;
       font-size: 16px; font-weight: 700;
       color: var(--text); letter-spacing: .12em;
     }
@@ -211,7 +211,7 @@
       background: rgba(0,0,0,0.4);
       border: 1px solid rgba(255,255,255,0.1);
       border-radius: 20px; padding: 7px 14px;
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--font-mono, 'JetBrains Mono'), monospace;
       font-size: 12px; color: var(--text); outline: none;
       transition: border-color .12s;
     }
@@ -283,7 +283,7 @@
       flex-shrink: 0;
     }
     .m-detail-name {
-      font-family: 'Noto Serif SC', serif;
+      font-family: var(--font-heading, 'Noto Serif SC'), serif;
       font-size: 18px; font-weight: 700;
       color: var(--text); margin-bottom: 6px;
     }
@@ -322,7 +322,7 @@
     .m-action-btn {
       flex: 1; padding: 10px 8px;
       border-radius: 8px; border: none;
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--font-mono, 'JetBrains Mono'), monospace;
       font-size: 12px; font-weight: 700;
       cursor: pointer; transition: opacity .12s;
       color: white;
@@ -350,7 +350,7 @@
 
     /* Upload bar */
     .upload-bar { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; gap: 7px; align-items: center; flex-wrap: wrap; justify-content: center; }
-    .up-btn { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 5px 13px; border-radius: 20px; border: 1px solid rgba(232,200,115,0.42); background: rgba(0,0,0,0.62); color: var(--accent); cursor: pointer; letter-spacing: .05em; backdrop-filter: blur(6px); transition: background .15s; white-space: nowrap; }
+    .up-btn { font-family: var(--font-mono, 'JetBrains Mono'), monospace; font-size: 10px; padding: 5px 13px; border-radius: 20px; border: 1px solid rgba(232,200,115,0.42); background: rgba(0,0,0,0.62); color: var(--accent); cursor: pointer; letter-spacing: .05em; backdrop-filter: blur(6px); transition: background .15s; white-space: nowrap; }
     .up-btn:hover { background: rgba(232,200,115,0.12); }
     .up-btn.danger { border-color: rgba(255,77,106,0.42); color: rgba(255,130,130,0.9); }
     .up-btn.danger:hover { background: rgba(255,77,106,0.1); }
@@ -364,13 +364,13 @@
 
     /* ── Panel inner UI ── */
     .p-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
-    .p-btn { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 4px 12px; border-radius: 4px; border: 0.5px solid var(--border2); background: rgba(232,200,115,0.08); color: var(--accent); cursor: pointer; transition: background .12s; }
+    .p-btn { font-family: var(--font-mono, 'JetBrains Mono'), monospace; font-size: 10px; padding: 4px 12px; border-radius: 4px; border: 0.5px solid var(--border2); background: rgba(232,200,115,0.08); color: var(--accent); cursor: pointer; transition: background .12s; }
     .p-btn:hover { background: rgba(232,200,115,0.16); }
     .p-btn.danger { border-color: rgba(255,77,106,0.4); color: rgba(255,120,130,0.9); background: rgba(255,77,106,0.06); }
-    .p-input { flex: 1; background: rgba(0,0,0,0.35); border: 0.5px solid var(--border); border-radius: 4px; padding: 6px 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text); outline: none; min-width: 0; transition: border-color .12s; }
+    .p-input { flex: 1; background: rgba(0,0,0,0.35); border: 0.5px solid var(--border); border-radius: 4px; padding: 6px 10px; font-family: var(--font-mono, 'JetBrains Mono'), monospace; font-size: 11px; color: var(--text); outline: none; min-width: 0; transition: border-color .12s; }
     .p-input:focus { border-color: var(--border2); }
     .p-input::placeholder { color: rgba(255,255,255,0.2); }
-    .p-md { width: 100%; height: 300px; background: rgba(0,0,0,0.35); border: 0.5px solid rgba(232,200,115,0.25); border-radius: 4px; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text); resize: none; outline: none; line-height: 1.75; transition: border-color .12s; }
+    .p-md { width: 100%; height: 300px; background: rgba(0,0,0,0.35); border: 0.5px solid rgba(232,200,115,0.25); border-radius: 4px; padding: 12px; font-family: var(--font-body, var(--font-mono, 'JetBrains Mono')), serif; font-size: 13px; color: var(--text); resize: none; outline: none; line-height: 1.75; transition: border-color .12s; }
     .p-md:focus { border-color: rgba(232,200,115,0.55); }
     .p-md::placeholder { color: rgba(255,255,255,0.2); }
     .p-hint { margin-top: 6px; font-size: 10px; color: rgba(255,255,255,0.25); }
