@@ -28,7 +28,7 @@ function DocItem(d, { onClick, variant = 'plain' } = {}) {
     <span style="font-size:20px">📄</span>
     <div style="flex:1;min-width:0">
       <div style="font-size:13px;font-weight:700;color:var(--text)">${(d.name || '').replace('.md', '')}</div>
-      <div style="font-size:10px;color:rgba(17, 16, 16, 0.3)">${d.path}</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.3)">${d.path}</div>
     </div>
   </div>`;
 }

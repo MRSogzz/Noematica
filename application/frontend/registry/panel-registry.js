@@ -5,9 +5,9 @@
 
    F1/F2/F3/F4/F5/B/H 都已經遷移成 Container/View 架構。M 是唯一還走
    iframe 注入的面板（Three.js/canvas 為主，版面跟其他面板差異太大，
-   見 hud-core.js openModal() 的 FULLWIDTH_PANELS 判斷），沒有 mount()。
+   見 shell/modal-shell.js 的 openModal() 裡 FULLWIDTH_PANELS 判斷），沒有 mount()。
 
-   title 刻意不在這裡重複定義，讀 window.PANEL_TITLES（hud-core.js 裡
+   title 刻意不在這裡重複定義，讀 window.PANEL_TITLES（shell/modal-shell.js 裡
    原本就有的那份），避免兩個地方各存一份標題、之後改名忘記同步兩邊。
    ============================================================ */
 
@@ -32,14 +32,14 @@ export const PANEL_REGISTRY = {
     get title() { return window.PANEL_TITLES?.f3 || '測試套件監控'; },
     icon: '🧪',
     // F3 的內容包在 <f3-workspace> Web Component 裡（Shadow DOM 隔離樣式，
-    // 見 components/f3-workspace.js 開頭註解——原本的 CSS 用 .card/.active
+    // 見 web-components/f3-workspace.js 開頭註解——原本的 CSS 用 .card/.active
     // 這種通用命名，會跟 hud.css/panel-skins.css 撞名，不能直接併入同一份
     // 文件的樣式空間）。跟其他面板不同，這裡不需要 renderSidebar/
     // renderToolbar/renderDetail，因為 F3 自己的版面（統計列/頁籤/格線/
     // 詳情面板）整個包在 Shadow DOM 裡自理，共用的只有最外層的
     // modal-title/關閉鈕。
     mount: async (gridWrapEl) => {
-      await import('../components/f3-workspace.js'); // 註冊 <f3-workspace> custom element
+      await import('../web-components/f3-workspace.js'); // 註冊 <f3-workspace> custom element
       gridWrapEl.innerHTML = '';
       gridWrapEl.appendChild(document.createElement('f3-workspace'));
     },

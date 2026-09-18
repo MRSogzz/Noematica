@@ -4,45 +4,45 @@
   "description": "溫暖手繪插畫風格（依 04 色彩 / 05 字體設計稿），取代預設的深色 HUD 主調",
   "version": "1.0.0",
   "colors": {
-    "accent":       "#C9A876",
-    "accent2":      "#A9BFA0",
-    "text":         "#5C5A53",
-    "muted":        "#8E8A82",
-    "border":       "rgba(92,90,83,0.16)",
-    "border2":      "rgba(92,90,83,0.32)",
-    "panelBg":      "rgba(251,247,241,0.96)",
-    "keyBg":        "rgba(92,90,83,0.06)",
-    "questBg":      "rgba(230,222,207,0.55)",
+    "accent": "#C9A876",
+    "accent2": "#A9BFA0",
+    "text": "#5C5A53",
+    "muted": "#8E8A82",
+    "border": "rgba(92,90,83,0.16)",
+    "border2": "rgba(92,90,83,0.32)",
+    "panelBg": "rgba(251,247,241,0.96)",
+    "keyBg": "rgba(92,90,83,0.06)",
+    "questBg": "rgba(230,222,207,0.55)",
     "overlayColor": "rgba(251,247,241,0.88)",
-    "bgBlur":       "6px",
-    "hpColor":      "#A9BFA0",
-    "hpColor2":     "#CFE2DF"
+    "bgBlur": "6px",
+    "hpColor": "#A9BFA0",
+    "hpColor2": "#CFE2DF"
   },
   "fonts": {
-    "heading":        "'Caveat', cursive",
-    "body":           "'Noto Serif TC', serif",
+    "heading": "'Caveat', cursive",
+    "body": "'Noto Serif TC', serif",
     "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Noto+Serif+TC:wght@400;500;700&display=swap"
   },
   "assets": {
-    "_TODO": "以下路徑都是佔位檔名，還沒有實體圖檔。切圖對照表（依程式碼實際功能核對過，不是用位置猜的）：f1=日誌(個人日誌) / m=圖譜(認知地圖) / b=卡片庫(模組背包) / f5=探索(知識庫搜尋/全部文件) / h=筆記(AI 知識整理助手) / esc=設定(hud-main.html 裡 esc 鍵本來就是綁 openSettings()，不是「按 esc 關閉」的意思)——這 6 個信心較高。f2(協作大廳/Commit紀錄)、f3(知識圖鑑，獨立 iframe 文件庫)、f4(目標專案時程/里程碑) 這 3 個設計稿裡沒有出現對應 icon，要另外設計或先沿用舊圖示，等你決定。bg 建議走橫幅插畫（畫面 01 的桌邊插畫），minimap 建議用畫面 01 左上角那個手繪羅盤。",
-    "bg":           "assets/themes/noematica/bg/bg.png",
-    "minimap":      "assets/themes/noematica/minimap/minimap.png",
+    "bg": "assets/themes/noematica/bg/bg.png",
+    "minimap": "assets/themes/noematica/minimap/minimap.png",
     "keys": {
-      "f1":         "assets/themes/noematica/keys/key-f1.png",
-      "f2":         "assets/themes/noematica/keys/key-f2.png",
-      "f3":         "assets/themes/noematica/keys/key-f3.png",
-      "f4":         "assets/themes/noematica/keys/key-f4.png",
-      "f5":         "assets/themes/noematica/keys/key-f5.png",
-      "b":          "assets/themes/noematica/keys/key-b.png",
-      "h":          "assets/themes/noematica/keys/key-h.png",
-      "m":          "assets/themes/noematica/keys/key-m.png",
-      "esc":        "assets/themes/noematica/keys/key-esc.png"
+      "f1": "assets/nav-icons/f1.png",
+      "f2": "assets/nav-icons/f2.png",
+      "f3": "assets/nav-icons/f3.png",
+      "f4": "assets/nav-icons/f4.png",
+      "f5": "assets/nav-icons/f5.png",
+      "b": "assets/nav-icons/b.png",
+      "h": "assets/nav-icons/h.png",
+      "m": "assets/nav-icons/m.png",
+      "esc": "assets/nav-icons/esc.png"
     },
     "avatars": {
-      "0":          "assets/themes/noematica/avatars/avatar-0.png",
-      "1":          "assets/themes/noematica/avatars/avatar-1.png",
-      "2":          "assets/themes/noematica/avatars/avatar-2.png"
-    }
+      "0": "assets/themes/noematica/avatars/avatar-0.png",
+      "1": "assets/themes/noematica/avatars/avatar-1.png",
+      "2": "assets/themes/noematica/avatars/avatar-2.png"
+    },
+    "iconStyle": "full"
   },
   "panelSkins": {
     "enabled": true,
@@ -50,15 +50,105 @@
     "trimSide": "#C9A876",
     "text": "#5C5A53",
     "panels": {
-      "b":  { "body": "#F3EEE6" },
-      "h":  { "body": "#EAD7D2" },
-      "f1": { "body": "#FBF7F1" },
-      "f2": { "body": "#CFE2DF" }
+      "b": {
+        "body": "#F3EEE6"
+      },
+      "h": {
+        "body": "#EAD7D2"
+      },
+      "f1": {
+        "body": "#FBF7F1"
+      },
+      "f2": {
+        "body": "#CFE2DF"
+      }
+    },
+    "shell": {
+      "_TODO": "base/header 已經用實際上傳的素材量測出精確百分比（見各自的 _desc）。sidebar/infoPanel/contentBase 還在等實際素材，topPct/bottomPct/leftPct/rightPct 目前是 null，null 值 hud-utils.js 的 applyTheme() 會直接跳過不設定 CSS 變數，對應的 background-image 那層會是 none，不會出現裂圖或報錯。",
+      "base": {
+        "_desc": "Panel Base — 9-slice，寬高都會變（見 01_panel_base/）。四邊比例是從實際切圖量測算出來的百分比，不是猜的固定 px——topPct/bottomPct 是相對這組素材『自己的』設計總高度（top+center+bottom 三張圖高度相加），leftPct/rightPct 同理是相對設計總寬度，跟 Modal 實際渲染多大無關，responsive 縮放時比例會一起等比例變。",
+        "tl": "assets/themes/noematica/panel/01_panel_base/panel_tl.png",
+        "t": "assets/themes/noematica/panel/01_panel_base/panel_t.png",
+        "tr": "assets/themes/noematica/panel/01_panel_base/panel_tr.png",
+        "l": "assets/themes/noematica/panel/01_panel_base/panel_l.png",
+        "c": "assets/themes/noematica/panel/01_panel_base/panel_c.png",
+        "r": "assets/themes/noematica/panel/01_panel_base/panel_r.png",
+        "bl": "assets/themes/noematica/panel/01_panel_base/panel_bl.png",
+        "b": "assets/themes/noematica/panel/01_panel_base/panel_b.png",
+        "br": "assets/themes/noematica/panel/01_panel_base/panel_br.png",
+        "topPct": 30.41,
+        "bottomPct": 30.41,
+        "leftPct": 32.06,
+        "rightPct": 32.27
+      },
+      "header": {
+        "_desc": "Header — 3-slice，只拉寬（見 02_header/）。leftPct/rightPct 是相對 Header 自己的設計總寬度（left+center+right 三張圖寬度相加）；heightPct 是相對『Header + Panel Base 本體』的 Modal 整體高度，決定 Header 在整個 Modal 裡佔多高的比例，不是固定 px。",
+        "left": "assets/themes/noematica/panel/02_header/header_left.png",
+        "center": "assets/themes/noematica/panel/02_header/header_center.png",
+        "right": "assets/themes/noematica/panel/02_header/header_right.png",
+        "leftPct": 28.33,
+        "rightPct": 18.56,
+        "heightPct": 20.14,
+        "title": "assets/themes/noematica/panel/02_header/header_title.png",
+        "leafLeft": "assets/themes/noematica/panel/02_header/header_leaf_left.png",
+        "leafRight": "assets/themes/noematica/panel/02_header/header_leaf_right.png",
+        "closeBg": "assets/themes/noematica/panel/02_header/close_bg.png",
+        "closeIcon": "assets/themes/noematica/panel/02_header/close_icon.png"
+      },
+      "sidebar": {
+        "_desc": "Sidebar — 3-slice，只拉高（見 03_sidebar/）。topPct/bottomPct 待實際素材到齊後量測填入，命名比照 header 的 heightPct 概念（相對 Modal 整體高度）。",
+        "top": "assets/themes/noematica/panel/03_sidebar/sidebar_top.png",
+        "mid": "assets/themes/noematica/panel/03_sidebar/sidebar_mid.png",
+        "bottom": "assets/themes/noematica/panel/03_sidebar/sidebar_bottom.png",
+        "rope": "assets/themes/noematica/panel/03_sidebar/sidebar_rope.png",
+        "slot": "assets/themes/noematica/panel/03_sidebar/slot.png",
+        "slotActive": "assets/themes/noematica/panel/03_sidebar/slot_active.png",
+        "slotBadge": "assets/themes/noematica/panel/03_sidebar/slot_badge.png",
+        "divider": "assets/themes/noematica/panel/03_sidebar/sidebar_divider.png",
+        "topPct": null,
+        "bottomPct": null
+      },
+      "contentBase": {
+        "_desc": "Content Base — 9-slice，編輯區可變（見 04_content/）。topPct/bottomPct/leftPct/rightPct 待實際素材到齊後量測填入。",
+        "tl": "assets/themes/noematica/panel/04_content/content_tl.png",
+        "t": "assets/themes/noematica/panel/04_content/content_t.png",
+        "tr": "assets/themes/noematica/panel/04_content/content_tr.png",
+        "l": "assets/themes/noematica/panel/04_content/content_l.png",
+        "c": "assets/themes/noematica/panel/04_content/content_c.png",
+        "r": "assets/themes/noematica/panel/04_content/content_r.png",
+        "bl": "assets/themes/noematica/panel/04_content/content_bl.png",
+        "b": "assets/themes/noematica/panel/04_content/content_b.png",
+        "br": "assets/themes/noematica/panel/04_content/content_br.png",
+        "topPct": null,
+        "bottomPct": null,
+        "leftPct": null,
+        "rightPct": null
+      },
+      "infoPanel": {
+        "_desc": "Info Panel — 3-slice，只拉高（見 05_info_panel/）。topPct/bottomPct 待實際素材到齊後量測填入。",
+        "top": "assets/themes/noematica/panel/05_info_panel/info_top.png",
+        "mid": "assets/themes/noematica/panel/05_info_panel/info_mid.png",
+        "bottom": "assets/themes/noematica/panel/05_info_panel/info_bottom.png",
+        "imageFrame": "assets/themes/noematica/panel/05_info_panel/image_frame.png",
+        "tagBg": "assets/themes/noematica/panel/05_info_panel/tag_bg.png",
+        "metaRow": "assets/themes/noematica/panel/05_info_panel/meta_row.png",
+        "divider": "assets/themes/noematica/panel/05_info_panel/divider.png",
+        "noteBox": "assets/themes/noematica/panel/05_info_panel/note_box.png",
+        "buttonSlot": "assets/themes/noematica/panel/05_info_panel/button_slot.png",
+        "topPct": null,
+        "bottomPct": null
+      },
+      "assetPool": {
+        "_desc": "06/07/08 — 跨層共用素材，給 web-components/ 元件庫讀，不屬於任何單一層",
+        "buttonsDir": "assets/themes/noematica/panel/06_buttons/",
+        "iconsDir": "assets/themes/noematica/panel/07_icons/",
+        "decorationsDir": "assets/themes/noematica/panel/08_decorations/"
+      }
     }
   },
   "layout": {
-    "minimapSize":   130,
-    "keyBtnSize":    44,
+    "minimapSize": 130,
+    "keyBtnSize": 44,
     "charCardWidth": 52
   }
 }

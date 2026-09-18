@@ -4,7 +4,7 @@
    每個面板開啟後共用同一個 .modal 殼（見 hud.css 的 .modal / .modal-header /
    .m-sidebar / .m-toolbar / .m-grid-wrap / .m-detail）。這份檔案讓
    B/H/F1/F2/F3/F4/F5 七個面板可以套用對應的美術配色跟角落圖示，但完全不動
-   hud-panels.js 裡的真實功能邏輯，也不動 .modal 的尺寸——跟 M 用
+   panels//view.js 裡的真實功能邏輯，也不動 .modal 的尺寸——跟 M 用
    同一個 92vw/90vh（見 hud.css .modal）。
 
    ============================================================
@@ -52,7 +52,7 @@
        當格子底圖；F4 里程碑卡沒有專屬底圖，只重新上色，不換版面結構）。
      - F1／F2／F5：套用風格後改成單欄清單、邊緣透明（見 .nw-list），
        沒套用風格時跟 M 一樣是預設方格。F1 面板開啟時預設直接進入今天
-       的筆記編輯畫面（見 hud-panels.js 的 f1()）。
+       的筆記編輯畫面（見 panels/f1/container.js）。
      - H：panel-h.js 是完全自訂的聊天室版面，不套用上面兩種骨架。
      - F3：內容整個是 panel-tests.html 的 iframe（fullwidth 模式），
        不套用 Grid/List Layout，只有外層邊框/角落/標題列套用皮膚。
@@ -91,10 +91,11 @@ html.nw-skins-enabled .modal.nw-frame .nw-corner-tl::before { border-width: 4px 
 html.nw-skins-enabled .modal.nw-frame .nw-corner-bl::before { border-width: 0 0 4px 4px; border-bottom-left-radius: 12px; }
 html.nw-skins-enabled .modal.nw-frame .nw-corner-br::before { border-width: 0 4px 4px 0; border-bottom-right-radius: 12px; }
 
-html.nw-skins-enabled .modal.nw-frame .nw-badge {
-  background-image: var(--nw-badge-url);
-  background-size: 60%; background-position: center; background-repeat: no-repeat;
-}
+/* 左上角徽章：使用者已經有自己的設計，這裡整個關掉，不再顯示
+   （包含舊版的圖片徽章跟上一版改的 emoji 圓形標籤）。--nw-badge-url
+   那幾個變數（下面各面板區塊裡）維持不動、不影響其他東西，只是
+   不會再被顯示出來。 */
+html.nw-skins-enabled .modal.nw-frame .nw-corner-tl { display: none !important; }
 
 /* .modal 本體：載入完成前完全不覆寫，長得跟 M 一樣（深色底、
    hud.css 預設的 border）；載入完成後才換成邊框色 + 底色 + 文字色。
@@ -118,16 +119,16 @@ html.nw-skins-enabled .modal.nw-frame .modal-header {
 html.nw-skins-enabled .modal.nw-frame .modal-title { color: var(--nw-text); }
 
 /* 關閉鈕：沿用 hud.css 裡原本在 header 內的 .modal-close（跟 M
-   同一個元件、同一個位置——margin-left:auto 讓它自然貼齊 header 右側），
-   載入完成前维持預設圓形按鈕＋「✕」文字；載入完成後只換視覺（改成
-   顯示 --nw-close-url 這張圖），完全不改位置。 */
+   同一個元件、同一個位置——margin-left:auto 讓它自然貼齊 header 右側）。
+   重新設計成統一的米白圓形按鈕＋「×」字元，不再依賴每個面板各自的
+   xx_close.png 圖片——不用準備素材，七個面板的關閉鈕也自動長得
+   一致，跟新的紙感配色搭配。 */
 html.nw-skins-enabled .modal.nw-frame .modal-close {
-  background-color: transparent; border-color: transparent;
-  background-image: var(--nw-close-url);
-  background-size: 65%; background-position: center; background-repeat: no-repeat;
-  color: transparent; font-size: 0;
+  background-color: #F8F3EA; background-image: none;
+  border: 1.5px solid #CDBA9A;
+  color: #7A6A58; font-size: 16px;
 }
-html.nw-skins-enabled .modal.nw-frame .modal-close:hover { filter: brightness(1.12); background-color: transparent; }
+html.nw-skins-enabled .modal.nw-frame .modal-close:hover { background-color: #EFE3D2; filter: none; }
 
 /* 清單樣式（F1/F2，靠 .nw-list 這個標記 class 啟用）：載入完成前跟
    M 一樣是預設方格清單，載入完成後才換成單欄橫列、邊緣透明——
@@ -149,6 +150,50 @@ html.nw-skins-enabled .modal.nw-frame.nw-list .m-item-grid .m-item .m-item-name 
 html.nw-skins-enabled .modal.nw-frame.nw-list .m-item-grid .m-item .m-item-badge { position: static; font-size: 10px; color: rgba(45,30,27,0.5); font-weight: 400; }
 
 
+/* ── 共通面板元件（Toolbar／Search／Sidebar 項目／Info Panel）─────────
+   這幾條規則 B/H/F1/F2/F4/F5 六個面板本來一模一樣，各自複製貼上在
+   下面自己的 skin 區塊裡（F3 是整塊 iframe，不需要）。複製貼上就會有
+   「漏掉一個」的風險——modal-skin-f1 先前就是漏了 .m-detail 這一段，
+   導致 F1（個人日誌）開啟後右側 Info Panel 沒有跟著換成紙感配色，
+   維持 hud.css 預設的深色底，跟其他面板不一致。
+
+   收斂成這裡的共用規則後，以後新增第八個面板會自動套用，不用記得
+   每個 skin 區塊都要複製一次。個別面板如果本來就設計成不一樣（例如
+   H 的 .m-item 是卡片、F2/F5 的 .m-item 是條列式清單，這兩種本來就
+   長得不一樣，不屬於「共同」的部分），維持在各自的 .modal-skin-<id>
+   區塊裡用同樣的選擇器再蓋一次即可——兩邊 selector 的 class 數量相同、
+   specificity 相等，寫在檔案裡更後面的那條會贏，不用另外加
+   !important 或刻意提高 specificity。 */
+html.nw-skins-enabled .modal.nw-frame .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
+html.nw-skins-enabled .modal.nw-frame .m-search {
+  background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.25); color: rgb(45,30,27);
+}
+html.nw-skins-enabled .modal.nw-frame .m-search::placeholder { color: rgba(45,30,27,0.4); }
+
+html.nw-skins-enabled .modal.nw-frame .m-cat { background: rgba(255,255,255,0.35); border: 1px solid rgba(120,84,40,0.18); }
+html.nw-skins-enabled .modal.nw-frame .m-cat:hover { background: rgba(255,255,255,0.55); }
+html.nw-skins-enabled .modal.nw-frame .m-cat-lbl { color: rgba(45,30,27,0.68); }
+
+html.nw-skins-enabled .modal.nw-frame .m-detail { background: rgba(255,255,255,0.4); border-left: 1px solid rgba(120,84,40,0.15); }
+html.nw-skins-enabled .modal.nw-frame .m-detail-name { color: rgb(45,30,27); }
+html.nw-skins-enabled .modal.nw-frame .m-attr-text { color: rgb(45,30,27); }
+html.nw-skins-enabled .modal.nw-frame .m-detail-desc { color: rgba(45,30,27,0.75); }
+
+/* Info Panel 頂部圖示區：拿掉原本深色漸層的「黑色矩形」跟裡面的大
+   emoji 圖示（.m-detail-big-icon／空狀態的 .m-empty-icon），改成
+   透明背景、只留一條淺色分隔線，跟新的紙感配色一致。如果之後要放
+   真實圖片，把 .m-detail-img 的 background 換成
+   background-image:url(...)+background-size:cover 即可，不影響這裡
+   拿掉 emoji 的部分。 */
+html.nw-skins-enabled .modal.nw-frame .m-detail-img {
+  background: transparent;
+  border-bottom: 1px solid rgba(120,84,40,0.15);
+}
+html.nw-skins-enabled .modal.nw-frame .m-detail-big-icon,
+html.nw-skins-enabled .modal.nw-frame .m-detail-big-svg,
+html.nw-skins-enabled .modal.nw-frame .m-empty-icon { display: none; }
+
+
 /* ── B：模組背包 ─────────────────────────────────────────────────── */
 .modal.modal-skin-b {
   --nw-body: var(--nw-body-b, #f6ecd9);
@@ -156,23 +201,13 @@ html.nw-skins-enabled .modal.nw-frame.nw-list .m-item-grid .m-item .m-item-badge
   --nw-close-url: var(--nw-close-url-b, url('assets/panel-art/b_close.png'));
 }
 
-html.nw-skins-enabled .modal.modal-skin-b .m-cat {
-  background: rgba(255,255,255,0.35); border: 1px solid rgba(120,84,40,0.18);
-}
-html.nw-skins-enabled .modal.modal-skin-b .m-cat:hover { background: rgba(255,255,255,0.55); }
 html.nw-skins-enabled .modal.modal-skin-b .m-cat.active {
   background: linear-gradient(180deg, #f0b545, #d98a1f);
   border-color: #a5661c;
   box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
-html.nw-skins-enabled .modal.modal-skin-b .m-cat-lbl { color: rgba(45,30,27,0.68); }
 html.nw-skins-enabled .modal.modal-skin-b .m-cat.active .m-cat-lbl { color: rgb(45,30,27); font-weight: 700; }
 
-html.nw-skins-enabled .modal.modal-skin-b .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
-html.nw-skins-enabled .modal.modal-skin-b .m-search {
-  background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.25); color: rgb(45,30,27);
-}
-html.nw-skins-enabled .modal.modal-skin-b .m-search::placeholder { color: rgba(45,30,27,0.4); }
 
 /* 背包是 Grid Layout：載入完成前是預設深色方格（跟 M 一樣），
    載入完成後每個 item 換成 b_slot.png 當格子底圖，版面結構不變。 */
@@ -185,10 +220,6 @@ html.nw-skins-enabled .modal.modal-skin-b .m-item:hover { filter: brightness(1.0
 html.nw-skins-enabled .modal.modal-skin-b .m-item.active { filter: brightness(1.15) saturate(1.1); }
 html.nw-skins-enabled .modal.modal-skin-b .m-item-name { color: rgb(45,30,27) !important; text-shadow: 0 1px 0 rgba(255,255,255,0.4); }
 
-html.nw-skins-enabled .modal.modal-skin-b .m-detail { background: rgba(255,255,255,0.4); border-left: 1px solid rgba(120,84,40,0.15); }
-html.nw-skins-enabled .modal.modal-skin-b .m-detail-name { color: rgb(45,30,27); }
-html.nw-skins-enabled .modal.modal-skin-b .m-attr-text { color: rgb(45,30,27); }
-html.nw-skins-enabled .modal.modal-skin-b .m-detail-desc { color: rgba(45,30,27,0.75); }
 
 html.nw-skins-enabled .modal.modal-skin-b .b-btn-validate,
 html.nw-skins-enabled .modal.modal-skin-b .b-btn-clear {
@@ -211,18 +242,12 @@ html.nw-skins-enabled .modal.modal-skin-b .b-btn-clear:hover { filter: brightnes
 }
 
 html.nw-skins-enabled .modal.modal-skin-h .m-sidebar { background: transparent; border-right: 1px solid rgba(120,84,40,0.15); }
-html.nw-skins-enabled .modal.modal-skin-h .m-cat-lbl { color: rgba(45,30,27,0.68); }
 html.nw-skins-enabled .modal.modal-skin-h .m-cat:hover { background: rgba(59,104,148,0.06); }
 html.nw-skins-enabled .modal.modal-skin-h .m-cat.active {
   background: rgba(59,104,148,0.13); border-color: rgba(59,104,148,0.38);
 }
 html.nw-skins-enabled .modal.modal-skin-h .m-cat.active .m-cat-lbl { color: #2c5a86; }
 
-html.nw-skins-enabled .modal.modal-skin-h .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
-html.nw-skins-enabled .modal.modal-skin-h .m-search {
-  background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.25); color: rgb(45,30,27);
-}
-html.nw-skins-enabled .modal.modal-skin-h .m-search::placeholder { color: rgba(45,30,27,0.4); }
 
 html.nw-skins-enabled .modal.modal-skin-h .m-item {
   background: rgba(255,255,255,0.45); border-color: rgba(120,84,40,0.18);
@@ -232,10 +257,6 @@ html.nw-skins-enabled .modal.modal-skin-h .m-item:hover {
 }
 html.nw-skins-enabled .modal.modal-skin-h .m-item-name { color: rgb(45,30,27) !important; }
 
-html.nw-skins-enabled .modal.modal-skin-h .m-detail { background: rgba(255,255,255,0.35); border-left: 1px solid rgba(120,84,40,0.15); }
-html.nw-skins-enabled .modal.modal-skin-h .m-detail-name { color: rgb(45,30,27); }
-html.nw-skins-enabled .modal.modal-skin-h .m-attr-text { color: rgb(45,30,27); }
-html.nw-skins-enabled .modal.modal-skin-h .m-detail-desc { color: rgba(45,30,27,0.75); }
 
 html.nw-skins-enabled .modal.modal-skin-h .wiki-ai-panel { background: transparent; color: rgb(45,30,27); }
 /* 小幫手頭像：h_avatar_frame.png 當外框，h_avatar_default/happy/thinking.png
@@ -260,18 +281,12 @@ html.nw-skins-enabled .modal.modal-skin-h .wiki-ai-panel { background: transpare
   --nw-close-url: var(--nw-close-url-f1, url('assets/panel-art/n_close.png'));
 }
 
-html.nw-skins-enabled .modal.modal-skin-f1 .m-cat { background: rgba(255,255,255,0.35); border: 1px solid rgba(120,84,40,0.18); }
-html.nw-skins-enabled .modal.modal-skin-f1 .m-cat:hover { background: rgba(255,255,255,0.55); }
 html.nw-skins-enabled .modal.modal-skin-f1 .m-cat.active {
   background: linear-gradient(180deg, #f0b545, #d98a1f);
   border-color: #a5661c; box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
-html.nw-skins-enabled .modal.modal-skin-f1 .m-cat-lbl { color: rgba(45,30,27,0.68); }
 html.nw-skins-enabled .modal.modal-skin-f1 .m-cat.active .m-cat-lbl { color: rgb(45,30,27); font-weight: 700; }
 
-html.nw-skins-enabled .modal.modal-skin-f1 .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
-html.nw-skins-enabled .modal.modal-skin-f1 .m-search { background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.25); color: rgb(45,30,27); }
-html.nw-skins-enabled .modal.modal-skin-f1 .m-search::placeholder { color: rgba(45,30,27,0.4); }
 
 /* 新增/編輯/刪除工具列按鈕（對應 n_btn_new/edit/delete.png），
    panel-h.js 等價的 F1 面板實作還沒有這三顆按鈕的真實 DOM/功能，
@@ -296,19 +311,13 @@ html.nw-skins-enabled .modal.modal-skin-f1 .n-btn-delete { background-image: url
   --nw-close-url: var(--nw-close-url-f2, url('assets/panel-art/l_close.png'));
 }
 
-html.nw-skins-enabled .modal.modal-skin-f2 .m-cat { background: rgba(255,255,255,0.35); border: 1px solid rgba(120,84,40,0.18); }
-html.nw-skins-enabled .modal.modal-skin-f2 .m-cat:hover { background: rgba(255,255,255,0.55); }
 html.nw-skins-enabled .modal.modal-skin-f2 .m-cat.active {
   background: rgba(59,104,148,0.15); border-color: #3b6894; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
-html.nw-skins-enabled .modal.modal-skin-f2 .m-cat-lbl { color: rgba(45,30,27,0.68); }
 html.nw-skins-enabled .modal.modal-skin-f2 .m-cat.active .m-cat-lbl { color: #2c5a86; font-weight: 700; }
 
-html.nw-skins-enabled .modal.modal-skin-f2 .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
-html.nw-skins-enabled .modal.modal-skin-f2 .m-search { background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.25); color: rgb(45,30,27); }
-html.nw-skins-enabled .modal.modal-skin-f2 .m-search::placeholder { color: rgba(45,30,27,0.4); }
 
-/* commit 紀錄是一條一條的清單：hud-panels.js 的 f2() 目前是直接用
+/* commit 紀錄是一條一條的清單：panels/f2/view.js 的 commitListHtml() 目前是直接用
    inline style 排成 flex row（不是走 .m-item-grid），這裡蓋掉 hud.css
    給 .m-item 預設的卡片背景/邊框，改成邊緣透明、只留一條底部分隔線。 */
 html.nw-skins-enabled .modal.modal-skin-f2 .m-item {
@@ -318,10 +327,6 @@ html.nw-skins-enabled .modal.modal-skin-f2 .m-item {
 html.nw-skins-enabled .modal.modal-skin-f2 .m-item:hover { background: rgba(59,104,148,0.06) !important; }
 html.nw-skins-enabled .modal.modal-skin-f2 .m-item-name { color: rgb(45,30,27) !important; }
 
-html.nw-skins-enabled .modal.modal-skin-f2 .m-detail { background: rgba(255,255,255,0.4); border-left: 1px solid rgba(120,84,40,0.15); }
-html.nw-skins-enabled .modal.modal-skin-f2 .m-detail-name { color: rgb(45,30,27); }
-html.nw-skins-enabled .modal.modal-skin-f2 .m-attr-text { color: rgb(45,30,27); }
-html.nw-skins-enabled .modal.modal-skin-f2 .m-detail-desc { color: rgba(45,30,27,0.75); }
 
 /* 房間狀態徽章（等待中/進行中/已滿/已鎖定）——語意色，比照 NDL §2.4，
    不做成圖片，跟 NUG「狀態語意固定不跟主題走」的原則一致，這幾個顏色
@@ -371,21 +376,15 @@ html.nw-skins-enabled .modal.modal-skin-f2 .m-detail-desc { color: rgba(45,30,27
   --nw-close-url: var(--nw-close-url-f4, url('assets/panel-art/p_close.png'));
 }
 
-html.nw-skins-enabled .modal.modal-skin-f4 .m-cat { background: rgba(255,255,255,0.35); border: 1px solid rgba(120,84,40,0.18); }
-html.nw-skins-enabled .modal.modal-skin-f4 .m-cat:hover { background: rgba(255,255,255,0.55); }
 html.nw-skins-enabled .modal.modal-skin-f4 .m-cat.active {
   background: linear-gradient(180deg, #f0b545, #d98a1f);
   border-color: #a5661c; box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
-html.nw-skins-enabled .modal.modal-skin-f4 .m-cat-lbl { color: rgba(45,30,27,0.68); }
 html.nw-skins-enabled .modal.modal-skin-f4 .m-cat.active .m-cat-lbl { color: rgb(45,30,27); font-weight: 700; }
 
-html.nw-skins-enabled .modal.modal-skin-f4 .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
-html.nw-skins-enabled .modal.modal-skin-f4 .m-search { background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.25); color: rgb(45,30,27); }
-html.nw-skins-enabled .modal.modal-skin-f4 .m-search::placeholder { color: rgba(45,30,27,0.4); }
 
 /* 里程碑卡片：沒有底圖素材，用跟 H 一樣的做法（淺色卡片 + 邊框），
-   不是方形 icon 格，卡片內文字（進度％／任務數）是 hud-panels.js 用
+   不是方形 icon 格，卡片內文字（進度％／任務數）是 panel-components/milestone-card.js 用
    inline style="color:var(--text)" 寫的，會透過 --text 變數統一吃到
    咖啡色（見 hud-utils.js 的 applyTheme()），這裡不用逐一覆寫。 */
 html.nw-skins-enabled .modal.modal-skin-f4 .m-item {
@@ -396,15 +395,11 @@ html.nw-skins-enabled .modal.modal-skin-f4 .m-item:hover {
 }
 html.nw-skins-enabled .modal.modal-skin-f4 .m-item-name { color: rgb(45,30,27) !important; }
 
-html.nw-skins-enabled .modal.modal-skin-f4 .m-detail { background: rgba(255,255,255,0.4); border-left: 1px solid rgba(120,84,40,0.15); }
-html.nw-skins-enabled .modal.modal-skin-f4 .m-detail-name { color: rgb(45,30,27); }
-html.nw-skins-enabled .modal.modal-skin-f4 .m-attr-text { color: rgb(45,30,27); }
-html.nw-skins-enabled .modal.modal-skin-f4 .m-detail-desc { color: rgba(45,30,27,0.75); }
 
 
 /* ── W：知識圖鑑（F5 鍵，文件搜尋結果，List Layout）─────────────────── */
 /* 同樣還沒有實際美術素材（w_badge.png／w_close.png，見 NAL.md §7）。
-   hud-panels.js 的 f5() 目前是直接用 inline style 排成 flex row（跟
+   panels/f5/view.js 的 searchResultsListHtml() 目前是直接用 inline style 排成 flex row（跟
    F2 commit 清單同一個做法，不是走 .m-item-grid），所以跟 F2 一樣直接
    覆寫 .m-item，不是靠共用的 .nw-list .m-item-grid .m-item 規則（那組
    規則需要 .m-item-grid 這層容器才會生效，這裡沒有）。 */
@@ -414,17 +409,11 @@ html.nw-skins-enabled .modal.modal-skin-f4 .m-detail-desc { color: rgba(45,30,27
   --nw-close-url: var(--nw-close-url-f5, url('assets/panel-art/w_close.png'));
 }
 
-html.nw-skins-enabled .modal.modal-skin-f5 .m-cat { background: rgba(255,255,255,0.35); border: 1px solid rgba(120,84,40,0.18); }
-html.nw-skins-enabled .modal.modal-skin-f5 .m-cat:hover { background: rgba(255,255,255,0.55); }
 html.nw-skins-enabled .modal.modal-skin-f5 .m-cat.active {
   background: rgba(59,104,148,0.15); border-color: #3b6894; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
-html.nw-skins-enabled .modal.modal-skin-f5 .m-cat-lbl { color: rgba(45,30,27,0.68); }
 html.nw-skins-enabled .modal.modal-skin-f5 .m-cat.active .m-cat-lbl { color: #2c5a86; font-weight: 700; }
 
-html.nw-skins-enabled .modal.modal-skin-f5 .m-toolbar { border-bottom-color: rgba(120,84,40,0.15); }
-html.nw-skins-enabled .modal.modal-skin-f5 .m-search { background: rgba(255,255,255,0.55); border-color: rgba(120,84,40,0.25); color: rgb(45,30,27); }
-html.nw-skins-enabled .modal.modal-skin-f5 .m-search::placeholder { color: rgba(45,30,27,0.4); }
 
 /* 文件清單：一條一條的搜尋結果，不用方格——蓋掉 hud.css 給 .m-item
    預設的卡片背景/邊框，改成邊緣透明、只留一條底部分隔線，跟 F2 同一套
@@ -436,7 +425,205 @@ html.nw-skins-enabled .modal.modal-skin-f5 .m-item {
 html.nw-skins-enabled .modal.modal-skin-f5 .m-item:hover { background: rgba(59,104,148,0.06) !important; }
 html.nw-skins-enabled .modal.modal-skin-f5 .m-item-name { color: rgb(45,30,27) !important; }
 
-html.nw-skins-enabled .modal.modal-skin-f5 .m-detail { background: rgba(255,255,255,0.4); border-left: 1px solid rgba(120,84,40,0.15); }
-html.nw-skins-enabled .modal.modal-skin-f5 .m-detail-name { color: rgb(45,30,27); }
-html.nw-skins-enabled .modal.modal-skin-f5 .m-attr-text { color: rgb(45,30,27); }
-html.nw-skins-enabled .modal.modal-skin-f5 .m-detail-desc { color: rgba(45,30,27,0.75); }
+
+
+/* ============================================================
+   Panel Art（WorkspaceShell 9/3-Slice）—— 依 test.html 的結構跟數值
+   換算成百分比，取代先前寫死 px 的版本。
+   ============================================================
+   換算時要注意兩件事：
+
+   1. padding 的百分比（不管 padding-top 還是 padding-left）一律是
+      相對「容器的寬度」計算，不是相對容器自己的高度——這是 CSS
+      規範本身的規則。如果 .modal 的上下留白直接寫成
+      padding-top/bottom: 4%，算出來的 4% 會是「.modal 的容器（外層
+      HUD 畫面）寬度的 4%」，不是「.modal 自己高度的 4%」，跟畫面完全
+      對不上。解法是把 padding 整個拿掉，改用 CSS Grid 的
+      grid-template-rows/columns 當留白欄列——Grid 的百分比欄寬永遠
+      相對容器寬度、列高永遠相對容器高度，才是我們要的效果。
+
+   2. .modal 不是正方形（92vw × 90vh，上限 1400×900），但九宮格/三宮格
+      素材的切片通常是正方形或至少寬高比跟 .modal 不同（例如
+      panel_tl.png 是 80×80）。如果切片的寬跟高共用同一個百分比數字，
+      .modal 縮放時素材會被拉扁或拉長。所以每個切片尺寸都拆成
+      「-x」（除以所在元素自己的寬）跟「-y」（除以所在元素自己的高）
+      兩個獨立變數。
+
+   3. 每個百分比的分母是「該素材實際貼上去那個元素自己的寬/高」，不是
+      整個 .modal 的 1400/900——例如 header 自己的寬其實是 1400 扣掉
+      左右外距（各 48px）之後的 1304px，header 的切片寬度要除以
+      1304，不是 1400，才會精準對上；sidebar/info 的高是 workspace
+      （扣掉外距、header、間距之後）剩下的 714px，不是整個 .modal 的
+      900。下面每個變數旁邊都寫了算式來源。
+
+   .m-content（Content）維持單純的實色圓角方塊，不做切片，跟 test.html
+   的 .content 一致。
+
+   選擇器沿用先前驗證過的做法：html.nw-panel-art.nw-skins-enabled
+   （同時要求兩個 class）+ .modal.nw-frame，specificity 比同檔案裡
+   B/H/F1/F2/F4/F5 共用的「純色系統」規則（4 個 class）高一階（5 個
+   class），確保這套九宮格圖片一定蓋得過純色 fallback，不用額外加
+   !important。
+   ============================================================ */
+:root {
+  /* 版面尺寸（原始 px → 百分比，分母見上方說明 3） */
+  --outer-pad-x: 3.4286%;   /* 48  / 1400（.modal 自己的寬） */
+  --outer-pad-y: 4%;        /* 36  / 900 （.modal 自己的高） */
+  --panel-gap-y: 2.6667%;   /* 24  / 900 （header 與 workspace 之間，.modal 自己的高） */
+  --header-height: 10%;     /* 90  / 900 （.modal 自己的高） */
+
+  /* workspace 自己的寬 = 1400 - 2×48 = 1304；
+     workspace 自己的高 = 900 - 2×36(外距) - 90(header) - 24(gap) = 714 */
+  --panel-gap-x: 1.8405%;   /* 24  / 1304（sidebar/content/info 之間） */
+  --sidebar-width: 8.4356%; /* 110 / 1304 */
+  --info-width: 26.0736%;   /* 340 / 1304 */
+
+  /* 9-slice 切片尺寸：x 除以「所在元素自己的寬」，y 除以「所在元素
+     自己的高」 */
+  --panel-slice-x: 5.7143%;    /* 80  / 1400（.modal 自己的寬） */
+  --panel-slice-y: 8.8889%;    /* 80  / 900 （.modal 自己的高） */
+  --header-slice-x: 13.8037%;  /* 180 / 1304（header 自己的寬） */
+  --sidebar-slice-y: 21.0084%; /* 150 / 714 （workspace 自己的高，sidebar 用 stretch 撐滿） */
+  --info-slice-y: 21.0084%;    /* 150 / 714 （同上） */
+
+  /* 素材路徑 —— 跟 test.html 完全一致 */
+  --base-tl: url('assets/themes/noematica/panel/01_panel_base/panel_tl.png');
+  --base-t:  url('assets/themes/noematica/panel/01_panel_base/panel_t.png');
+  --base-tr: url('assets/themes/noematica/panel/01_panel_base/panel_tr.png');
+  --base-l:  url('assets/themes/noematica/panel/01_panel_base/panel_l.png');
+  --base-c:  url('assets/themes/noematica/panel/01_panel_base/panel_c.png');
+  --base-r:  url('assets/themes/noematica/panel/01_panel_base/panel_r.png');
+  --base-bl: url('assets/themes/noematica/panel/01_panel_base/panel_bl.png');
+  --base-b:  url('assets/themes/noematica/panel/01_panel_base/panel_b.png');
+  --base-br: url('assets/themes/noematica/panel/01_panel_base/panel_br.png');
+
+  --header-l: url('assets/themes/noematica/panel/02_header/header_left.png');
+  --header-c: url('assets/themes/noematica/panel/02_header/header_center.png');
+  --header-r: url('assets/themes/noematica/panel/02_header/header_right.png');
+
+  --sidebar-t: url('assets/themes/noematica/panel/03_sidebar/sidebar_top.png');
+  --sidebar-m: url('assets/themes/noematica/panel/03_sidebar/sidebar_mid.png');
+  --sidebar-b: url('assets/themes/noematica/panel/03_sidebar/sidebar_bottom.png');
+
+  --info-t: url('assets/themes/noematica/panel/05_info_panel/info_top.png');
+  --info-m: url('assets/themes/noematica/panel/05_info_panel/info_mid.png');
+  --info-b: url('assets/themes/noematica/panel/05_info_panel/info_bottom.png');
+}
+
+/* ── Panel Base：.modal，9-slice ──────────────────────────────────────── */
+html.nw-panel-art.nw-skins-enabled .modal.nw-frame {
+  /* 原本用 flex + padding 撐留白，改成 Grid：
+     欄 = [左外距][中間內容][右外距]、列 = [上外距][header][gap][workspace][下外距]。
+     留白變成「欄/列本身的大小」而不是 padding，百分比才會照正確的軸
+     （欄→寬、列→高）去算，見上方說明 1。 */
+  display: grid;
+  grid-template-columns: var(--outer-pad-x) 1fr var(--outer-pad-x);
+  grid-template-rows:
+    var(--outer-pad-y) var(--header-height) var(--panel-gap-y) 1fr var(--outer-pad-y);
+
+  /* background-size 的百分比一律相對「這個元素自己」的寬高計算（跟
+     padding 不一樣，這裡沒有基準錯誤的問題），所以維持用 .modal 自己
+     的 --panel-slice-x/-y，不用再額外換算。 */
+  background-origin: border-box;
+  background-clip: border-box;
+  background-color: #FBF7F1;
+
+  background-image: var(--base-tl), var(--base-tr), var(--base-bl), var(--base-br),
+                    var(--base-t), var(--base-b), var(--base-l), var(--base-r),
+                    var(--base-c);
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat,
+                     repeat-x, repeat-x, repeat-y, repeat-y,
+                     repeat;
+  background-position: top left, top right, bottom left, bottom right,
+                       top center, bottom center, center left, center right,
+                       center center;
+  background-size: var(--panel-slice-x) var(--panel-slice-y),
+                   var(--panel-slice-x) var(--panel-slice-y),
+                   var(--panel-slice-x) var(--panel-slice-y),
+                   var(--panel-slice-x) var(--panel-slice-y),
+                   calc(100% - 2 * var(--panel-slice-x)) var(--panel-slice-y),
+                   calc(100% - 2 * var(--panel-slice-x)) var(--panel-slice-y),
+                   var(--panel-slice-x) calc(100% - 2 * var(--panel-slice-y)),
+                   var(--panel-slice-x) calc(100% - 2 * var(--panel-slice-y)),
+                   auto; /* 中央 --base-c：用原始尺寸循環平鋪，不要拉伸去填滿剩餘空間 */
+
+  /* 圓角交給 panel_tl/tr/bl/br.png 素材本身，這裡不再另外裁一次。 */
+  border-radius: 0;
+  border: none;
+}
+
+/* ── Header：.modal-header，3-slice 只拉寬 ─────────────────────────────── */
+html.nw-panel-art.nw-skins-enabled .modal.nw-frame .modal-header {
+  grid-column: 2;
+  grid-row: 2;
+  position: relative;
+
+  background-origin: border-box;
+  background-clip: border-box;
+  background-color: #FBF7F1;
+
+  background-image: var(--header-l), var(--header-r), var(--header-c);
+  background-repeat: no-repeat, no-repeat, repeat-x;
+  background-position: left center, right center, center center;
+  /* 用 --header-slice-x（分母是 header 自己的寬 1304，不是 1400），
+     高度維持 100%，跟原本邏輯一致，見上方說明 3。 */
+  background-size: var(--header-slice-x) 100%, var(--header-slice-x) 100%,
+                   auto 100%; /* 中央 --header-c：只固定高度，寬度用原始尺寸循環平鋪 */
+
+  border-bottom: none;
+  padding: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── Workspace：.modal-body，容納 Sidebar/Content/Info Panel ──────────── */
+html.nw-panel-art.nw-skins-enabled .modal.nw-frame .modal-body {
+  grid-column: 2;
+  grid-row: 4;
+  display: flex;
+  gap: var(--panel-gap-x);
+}
+
+/* ── Sidebar：.m-sidebar，3-slice 只拉高 ───────────────────────────────── */
+html.nw-panel-art.nw-skins-enabled .modal.nw-frame .m-sidebar {
+  width: var(--sidebar-width);
+
+  background-origin: border-box;
+  background-clip: border-box;
+  background-color: #FBF7F1;
+
+  background-image: var(--sidebar-t), var(--sidebar-b), var(--sidebar-m);
+  background-repeat: no-repeat, no-repeat, repeat-y;
+  background-position: top center, bottom center, center center;
+  /* 分母是 workspace 自己的高 714（sidebar 用 stretch 撐滿 workspace
+     的高），不是 900，見上方說明 3。 */
+  background-size: 100% var(--sidebar-slice-y), 100% var(--sidebar-slice-y),
+                   100% auto; /* 中央 --sidebar-m：只固定寬度，高度用原始尺寸循環平鋪 */
+
+  border-right: none;
+}
+
+/* ── Content：.m-content，維持單純實色圓角方塊，不做切片 ─────────────── */
+/* 跟 test.html 的 .content 一致：flex:1 自動撐滿剩餘寬度，不需要另外
+   設定 width。 */
+html.nw-panel-art.nw-skins-enabled .modal.nw-frame .m-content {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  border: none;
+}
+
+/* ── Info Panel：.m-detail，3-slice 只拉高 ─────────────────────────────── */
+html.nw-panel-art.nw-skins-enabled .modal.nw-frame .m-detail {
+  width: var(--info-width);
+
+  background-origin: border-box;
+  background-clip: border-box;
+  background-color: #FBF7F1;
+
+  background-image: var(--info-t), var(--info-b), var(--info-m);
+  background-repeat: no-repeat, no-repeat, repeat-y;
+  background-position: top center, bottom center, center center;
+  background-size: 100% var(--info-slice-y), 100% var(--info-slice-y),
+                   100% auto; /* 中央 --info-m：只固定寬度，高度用原始尺寸循環平鋪 */
+
+  border-left: none;
+}

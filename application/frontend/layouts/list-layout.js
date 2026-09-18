@@ -17,7 +17,7 @@
        items: commits,
        renderItem: (c, i) => CommitRow(c, { onClick: `f2Show(${i})` }),
        loading: false,
-       emptyIcon: '',
+       emptyIcon: '📭',
        emptyText: '尚無 Commit 記錄',
      }));
    ============================================================ */
@@ -27,7 +27,7 @@ const ListLayout = {
     items,
     renderItem,
     loading = false,
-    emptyIcon = '',
+    emptyIcon = '📭',
     emptyText = '無資料',
     emptyHint = '',
   }) {

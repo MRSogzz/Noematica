@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>無縫修復版 9/3-Slice Layout（響應式）</title>
+<style>
+    :root {
+        /* ════════════════════════════════════════════════════════════
+           響應式換算說明
+           ════════════════════════════════════════════════════════════
+           原本的 px 數字是照 1400×900（.panel-frame 的 max-width/
+           max-height）這個「主稿尺寸」畫的。要讓面板縮小到 92vw/90vh
+           時，9-slice 的邊框跟版面留白也跟著等比例縮放，數字必須換成
+           百分比。換算時要注意兩件事：
+
+           1. padding 的百分比（不管 padding-top 還是 padding-left）
+              一律是相對「容器的寬度」去算，不是相對容器自己的高度——
+              這是 CSS 規範本身的規則，不是 bug。如果 .panel-frame 的
+              上下留白直接寫成 padding-top/bottom: 4%，瀏覽器算出來的
+              4% 會是「viewport 寬度的 4%」，不是「面板高度的 4%」，
+              跟畫面完全對不上。解法是把 padding 整個拿掉，改用 CSS
+              Grid 的 grid-template-rows/columns 當留白欄列——Grid 的
+              百分比欄寬永遠相對容器寬度、列高永遠相對容器高度，才是
+              我們要的效果。
+
+           2. .panel-frame 不是正方形（1400×900），但九宮格素材的角
+              （例如 panel_tl.png）通常是正方形（本例 80×80）。如果
+              寬跟高共用同一個百分比數字，縮放後正方形素材會被拉扁或
+              拉長。所以每個切片尺寸都拆成「-x」（除以所在容器的寬）
+              跟「-y」（除以所在容器的高）兩個獨立變數。
+
+           3. 每個百分比的「分母」是該素材實際貼上去那個元素自己的
+              寬/高，不是整個 .panel-frame 的 1400/900——例如 header
+              本身的寬度其實是 1400 扣掉左右外距（各 48px）之後的
+              1304px，header 的切片寬度要除以 1304，不是 1400，才會
+              精準對上。下面每個變數旁邊都寫了對應的算式來源。
+           ════════════════════════════════════════════════════════════ */
+
+        /* 版面尺寸（原始 px → 百分比，分母見註解） */
+        --outer-pad-x: 3.4286%;   /* 48  / 1400（panel-frame 自己的寬） */
+        --outer-pad-y: 4%;        /* 36  / 900 （panel-frame 自己的高） */
+        --panel-gap-y: 2.6667%;   /* 24  / 900 （header 與 workspace 之間，panel-frame 自己的高） */
+        --header-height: 10%;     /* 90  / 900 （panel-frame 自己的高） */
+
+        /* workspace 自己的寬 = 1400 - 2×48 = 1304；
+           workspace 自己的高 = 900 - 2×36(外距) - 90(header) - 24(gap) = 714 */
+        --panel-gap-x: 1.8405%;   /* 24  / 1304（sidebar/content/info 之間） */
+        --sidebar-width: 8.4356%; /* 110 / 1304 */
+        --info-width: 26.0736%;  /* 340 / 1304 */
+
+        /* 9-slice 切片尺寸：x 除以「所在元素自己的寬」，y 除以「所在元素自己的高」 */
+        --panel-slice-x: 5.7143%;  /* 80  / 1400（panel-frame 自己的寬） */
+        --panel-slice-y: 8.8889%;  /* 80  / 900 （panel-frame 自己的高） */
+        --header-slice-x: 13.8037%; /* 180 / 1304（header 自己的寬） */
+        --sidebar-slice-y: 21.0084%; /* 150 / 714（workspace 自己的高，sidebar 跟著 stretch 撐滿） */
+        --info-slice-y: 21.0084%;   /* 150 / 714（同上） */
+
+        /* 路径提取 - 不變 */
+        --base-tl: url('assets/themes/noematica/panel/01_panel_base/panel_tl.png');
+        --base-t:  url('assets/themes/noematica/panel/01_panel_base/panel_t.png');
+        --base-tr: url('assets/themes/noematica/panel/01_panel_base/panel_tr.png');
+        --base-l:  url('assets/themes/noematica/panel/01_panel_base/panel_l.png');
+        --base-c:  url('assets/themes/noematica/panel/01_panel_base/panel_c.png');
+        --base-r:  url('assets/themes/noematica/panel/01_panel_base/panel_r.png');
+        --base-bl: url('assets/themes/noematica/panel/01_panel_base/panel_bl.png');
+        --base-b:  url('assets/themes/noematica/panel/01_panel_base/panel_b.png');
+        --base-br: url('assets/themes/noematica/panel/01_panel_base/panel_br.png');
+
+        --header-l: url('assets/themes/noematica/panel/02_header/header_left.png');
+        --header-c: url('assets/themes/noematica/panel/02_header/header_center.png');
+        --header-r: url('assets/themes/noematica/panel/02_header/header_right.png');
+
+        --sidebar-t: url('assets/themes/noematica/panel/03_sidebar/sidebar_top.png');
+        --sidebar-m: url('assets/themes/noematica/panel/03_sidebar/sidebar_mid.png');
+        --sidebar-b: url('assets/themes/noematica/panel/03_sidebar/sidebar_bottom.png');
+
+        --info-t: url('assets/themes/noematica/panel/05_info_panel/info_top.png');
+        --info-m: url('assets/themes/noematica/panel/05_info_panel/info_mid.png');
+        --info-b: url('assets/themes/noematica/panel/05_info_panel/info_bottom.png');
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Noto Serif TC', serif; }
+    body { background: #dad2c3; height: 100vh; display: flex; justify-content: center; align-items: center; }
+
+    /* ══════════ 主面板 9-Slice：四角优先，中间靠后 ══════════ */
+    .panel-frame {
+        width: 92vw; height: 90vh; max-width: 1400px; max-height: 900px;
+
+        /* 原本用 flex + padding 撐留白，改成 Grid：
+           欄 = [左外距][中間內容][右外距]、列 = [上外距][header][gap][workspace][下外距]。
+           留白變成「欄/列本身的大小」，而不是 padding，百分比才會照
+           正確的軸（欄→寬、列→高）去算，見上面 :root 的說明 1。 */
+        display: grid;
+        grid-template-columns: var(--outer-pad-x) 1fr var(--outer-pad-x);
+        grid-template-rows:
+            var(--outer-pad-y) var(--header-height) var(--panel-gap-y) 1fr var(--outer-pad-y);
+
+        /* ⭐ 核心修复：背景铺满边框，不因留白产生空隙 */
+        background-origin: border-box;
+        background-clip: border-box;
+
+        background-color: #FBF7F1;
+
+        background-image: var(--base-tl), var(--base-tr), var(--base-bl), var(--base-br),
+                          var(--base-t), var(--base-b), var(--base-l), var(--base-r),
+                          var(--base-c);
+
+        background-repeat: no-repeat, no-repeat, no-repeat, no-repeat,
+                           repeat-x, repeat-x, repeat-y, repeat-y,
+                           repeat;
+
+        background-position: top left, top right, bottom left, bottom right,
+                             top center, bottom center, center left, center right,
+                             center center;
+
+        /* background-size 的百分比一律相對「這個元素自己」的寬高計算
+           （跟 padding 不一樣，這裡沒有基準錯誤的問題），所以這裡維持
+           用 panel-frame 自己的 --panel-slice-x/-y，不用再額外換算。 */
+        background-size: var(--panel-slice-x) var(--panel-slice-y),
+                         var(--panel-slice-x) var(--panel-slice-y),
+                         var(--panel-slice-x) var(--panel-slice-y),
+                         var(--panel-slice-x) var(--panel-slice-y),
+                         calc(100% - 2 * var(--panel-slice-x)) var(--panel-slice-y),
+                         calc(100% - 2 * var(--panel-slice-x)) var(--panel-slice-y),
+                         var(--panel-slice-x) calc(100% - 2 * var(--panel-slice-y)),
+                         var(--panel-slice-x) calc(100% - 2 * var(--panel-slice-y)),
+                         calc(100% - 2 * var(--panel-slice-x)) calc(100% - 2 * var(--panel-slice-y));
+    }
+
+    /* ══════════ Header 3-Slice：左 > 右 > 中 ══════════ */
+    .header {
+        grid-column: 2;
+        grid-row: 2;
+        position: relative;
+
+        background-origin: border-box;
+        background-clip: border-box;
+
+        background-color: #FBF7F1;
+
+        background-image: var(--header-l), var(--header-r), var(--header-c);
+        background-repeat: no-repeat, no-repeat, repeat-x;
+        background-position: left center, right center, center center;
+        /* 用 --header-slice-x（分母是 header 自己的寬 1304，不是 1400），
+           高度維持 100%，跟原本邏輯一致。 */
+        background-size: var(--header-slice-x) 100%, var(--header-slice-x) 100%,
+                         calc(100% - 2 * var(--header-slice-x)) 100%;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .close-btn {
+        position: absolute; right: 24px; top: 50%; transform: translateY(-50%);
+        width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(0,0,0,0.1); cursor: pointer;
+    }
+
+    .workspace {
+        grid-column: 2;
+        grid-row: 4;
+        display: flex; gap: var(--panel-gap-x); min-height: 0;
+    }
+
+    /* ══════════ Sidebar 3-Slice：上 > 下 > 中，无缝连接 ══════════ */
+    .sidebar {
+        width: var(--sidebar-width); flex-shrink: 0;
+
+        background-origin: border-box;
+        background-clip: border-box;
+
+        background-color: #FBF7F1;
+
+        background-image: var(--sidebar-t), var(--sidebar-b), var(--sidebar-m);
+        background-repeat: no-repeat, no-repeat, repeat-y;
+        /* 分母是 workspace 自己的高 714（sidebar 用 stretch 撐滿 workspace 的高），
+           不是 900，見 :root 註解 3。 */
+        background-size: 100% var(--sidebar-slice-y), 100% var(--sidebar-slice-y),
+                         100% calc(100% - 2 * var(--sidebar-slice-y));
+
+        display: flex; flex-direction: column; align-items: center; padding: 20px 0; gap: 16px;
+    }
+
+    .content {
+        flex: 1; background: rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 32px; overflow-y: auto;
+    }
+
+    /* ══════════ Info Panel 3-Slice：上 > 下 > 中，无缝连接 ══════════ */
+    .info-panel {
+        width: var(--info-width); flex-shrink: 0;
+
+        background-origin: border-box;
+        background-clip: border-box;
+
+        background-color: #FBF7F1;
+
+        background-image: var(--info-t), var(--info-b), var(--info-m);
+        background-repeat: no-repeat, no-repeat, repeat-y;
+        background-size: 100% var(--info-slice-y), 100% var(--info-slice-y),
+                         100% calc(100% - 2 * var(--info-slice-y));
+
+        padding: 24px; display: flex; flex-direction: column; gap: 20px;
+    }
+
+    /* 控件样式（跟面板整体缩放无关，维持固定 px，属于常见 UI 惯例，
+       不属于 9/3-slice 的响应式范围——如果也想让这些跟着缩放，告诉我
+       想要哪一批即可再补） */
+    .search-box { width: 100%; height: 48px; border-radius: 24px; border: 1px solid rgba(0,0,0,0.15); background: rgba(255,255,255,0.6); padding: 0 24px; font-size: 14px; }
+    .list-row { padding: 16px 0; border-bottom: 1px solid rgba(0,0,0,0.1); font-size: 15px; }
+    .detail-image { height: 180px; background: rgba(255,255,255,0.5); border-radius: 12px; margin-bottom: 10px; }
+    .detail-title { font-size: 18px; font-weight: 700; padding-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.1); }
+    .action-btn { padding: 16px; border-radius: 10px; border: none; background: #D8C9AE; cursor: pointer; font-weight: 700; }
+    .side-item { width: 70px; height: 70px; background: rgba(255,255,255,0.4); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+
+<div class="panel-frame">
+    <div class="header">
+        <div style="font-size: 20px; font-weight: 700;">個人日誌</div>
+        <button class="close-btn">×</button>
+    </div>
+
+    <div class="workspace">
+        <div class="sidebar">
+            <div class="side-item">📄</div>
+            <div class="side-item">📝</div>
+            <div class="side-item">📅</div>
+        </div>
+
+        <div class="content">
+            <input type="text" class="search-box" placeholder="note-2026-09-06.md">
+            <div class="list-row">token是如何演化的</div>
+            <div class="list-row">Word_Embedding的位置信息</div>
+            <div class="list-row">大模型如何计算Loss</div>
+            <div class="list-row">大模型的原理</div>
+            <div class="list-row">多面注意力/FFN介绍</div>
+            <div class="list-row">LLM注意力机制</div>
+        </div>
+
+        <div class="info-panel">
+            <div class="detail-image"><img src="" alt="" style="width:100%; height:100%; object-fit:cover; border-radius:12px;"></div>
+            <div class="detail-title">選擇一個項目</div>
+            <div style="flex:1;"></div>
+            <button class="action-btn">查看 / 編輯</button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

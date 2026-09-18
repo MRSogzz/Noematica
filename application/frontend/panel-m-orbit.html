@@ -4,42 +4,46 @@
 <meta charset="UTF-8">
 <title>M · 認知地圖 — Activation Orbit</title>
 <script src="theme-boot.js"></script>
-<!-- 前端插件擴充點：任何實作 LatentProvider 的後端插件，回傳的
-     belief.plugin 都會被這個共用元件自動渲染 -->
-<script src="panel-components/plugin-badge.js"></script>
+<script src="ui/plugin-badge.js"></script>
 <style>
-    :root {
-        /* 命名法：跟 theme-boot.js 設的共用變數「同名」的（--accent/--text/--border/
-           --accent2），保留原本寫死的字面值當預設值就好，不要包一層 var(--同名,...)——
-           那樣會變成 CSS 的循環參照，規範上整個屬性直接判定無效，不會乖乖退回
-           fallback。theme-boot.js 用 inline style 設值時，本來就會自動蓋掉這裡的
-           字面值（inline style 優先權天生比 stylesheet 規則高），不需要額外接管。
-           跟共用變數「不同名」的（--bg/--panel/--panel-2/--text-dim），才需要用
-           var(--共用變數名, 原本的字面值) 明確接手。 */
-        --bg: var(--panel-bg, #0a091b);
-        --panel: var(--panel-bg, #14132b);
-        --panel-2: var(--key-bg, #191830);
-        --border: rgba(255,255,255,0.08);
-        --text: #e5e0ff;
-        --text-dim: var(--muted, rgba(255,255,255,0.45));
-        --text-faint: rgba(255,255,255,0.25);
-        --accent: #a78bfa;
-        --accent2: #f472b6;
-        /* Strong/Medium/Weak/Hidden 是 Activation Queue 的信心分級語意色，
-           刻意不跟主題走——換主題不該把「綠=強／紅=危險」這種使用者已經
-           建立的視覺記憶打亂，見與使用者的討論結論。 */
-        --strong: #4ade80;
-        --medium: #fbbf24;
-        --weak: #60a5fa;
-        --danger: #f87171;
-    }
-    * { box-sizing: border-box; }
-    html, body {
-        margin: 0; height: 100%; background: var(--bg); color: var(--text);
-        font-family: 'Segoe UI', -apple-system, sans-serif; overflow: hidden;
+    /* ============================================================
+       配色系統（依 design/多跳關係圖.pdf）
+       ============================================================ */
+    :root, body {
+        --bg:        #F5F0E6;
+        --panel:     #EDE6D6;
+        --panel-2:   #FBF7ED;
+
+        --text:      #3F433F;
+        --text-dim:  #5A5E5A;
+        --text-faint:#7A7E7A;
+
+        --hop1:  #A7B29A;
+        --hop2:  #7E9C95;
+        --hop3:  #A7A0B8;
+        --hop4:  #D9B7A7;
+        --focus: #D5B37C;
+
+        --accent:  #D5B37C;
+        --accent2: #A7B29A;
+        --border:  rgba(63,67,63,0.16);
+        --border2: rgba(63,67,63,0.28);
+
+        --strong: #7E9C95;
+        --medium: #D5B37C;
+        --weak:   #A7A0B8;
+        --danger: #C98476;
     }
 
-    /* ===== 整體 Grid ===== */
+    * { box-sizing: border-box; }
+    html, body {
+        margin: 0; height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-body, 'Noto Serif TC', 'Segoe UI'), -apple-system, sans-serif;
+        overflow: hidden;
+    }
+
     #app {
         display: grid;
         grid-template-areas:
@@ -59,236 +63,428 @@
         }
     }
 
-    /* ===== Topbar ===== */
     #topbar {
         grid-area: topbar; display: flex; align-items: center; gap: 10px;
-        padding: 0 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+        padding: 0 16px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--border);
         position: relative; z-index: 50;
     }
-    #topbar .logo { font-size: 13px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+    #topbar .logo {
+        font-size: 13px; font-weight: 700;
+        color: var(--text);
+        white-space: nowrap;
+        letter-spacing: .04em;
+    }
     #search-wrap { position: relative; flex: 1; max-width: 420px; }
     #search-input {
-        width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border);
-        border-radius: 8px; padding: 8px 12px; color: var(--text); font-family: inherit; font-size: 13px;
+        width: 100%;
+        background: #FFFFFF;
+        border: 1px solid var(--border2);
+        border-radius: 8px; padding: 8px 12px;
+        color: var(--text);
+        font-family: inherit; font-size: 13px;
     }
-    #search-input:focus { outline: none; border-color: var(--accent); }
+    #search-input::placeholder { color: var(--text-faint); opacity: 1; }
+    #search-input:focus { outline: none; border-color: var(--accent2); }
     #search-results {
         position: absolute; top: calc(100% + 6px); left: 0; right: 0;
-        background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
-        max-height: 320px; overflow-y: auto; display: none; box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+        background: #FFFFFF;
+        border: 1px solid var(--border2); border-radius: 8px;
+        max-height: 320px; overflow-y: auto; display: none;
+        box-shadow: 0 12px 30px rgba(63,67,63,0.12);
+        z-index: 60;
     }
     #search-results.active { display: block; }
-    .search-result-item { padding: 8px 12px; cursor: pointer; font-size: 12px; border-bottom: 1px solid var(--border); }
+    .search-result-item {
+        padding: 8px 12px; cursor: pointer; font-size: 12px;
+        border-bottom: 1px solid var(--border);
+        color: var(--text);
+    }
     .search-result-item:last-child { border-bottom: none; }
-    .search-result-item:hover { background: rgba(167,139,250,0.1); }
-    .search-result-item .sri-name { color: var(--text); }
+    .search-result-item:hover { background: rgba(213,179,124,0.15); }
+    .search-result-item .sri-name { color: var(--text); font-weight: 500; }
     .search-result-item .sri-meta { color: var(--text-faint); font-size: 10px; margin-left: 6px; }
-    .search-result-group-label { padding: 6px 12px; font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .5px; }
+    .search-result-group-label {
+        padding: 6px 12px; font-size: 10px;
+        color: var(--text-dim);
+        text-transform: uppercase; letter-spacing: .5px;
+        background: rgba(63,67,63,0.03);
+    }
 
     #topbar-actions { margin-left: auto; display: flex; gap: 8px; }
     .topbar-btn {
-        background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.3);
-        color: var(--accent); font-family: inherit; font-size: 11px; padding: 7px 12px;
-        border-radius: 7px; cursor: pointer; white-space: nowrap;
+        background: rgba(213,179,124,0.22);
+        border: 1px solid rgba(213,179,124,0.65);
+        color: #6B5420;
+        font-family: inherit; font-size: 11px; font-weight: 600;
+        padding: 7px 12px; border-radius: 7px; cursor: pointer;
+        white-space: nowrap;
     }
-    .topbar-btn:hover { background: rgba(167,139,250,0.2); }
-    .topbar-btn.governance-hint { border-color: rgba(251,191,36,0.35); color: var(--medium); background: rgba(251,191,36,0.08); }
-    .topbar-btn.governance-hint:hover { background: rgba(251,191,36,0.16); }
+    .topbar-btn:hover { background: rgba(213,179,124,0.38); }
+    .topbar-btn.governance-hint {
+        border-color: rgba(201,132,118,0.65);
+        color: #8A3D2E;
+        background: rgba(201,132,118,0.16);
+    }
+    .topbar-btn.governance-hint:hover { background: rgba(201,132,118,0.28); }
 
     /* ===== Activation Queue（左）===== */
     #queue {
-        grid-area: queue; background: var(--panel); border-right: 1px solid var(--border);
+        grid-area: queue;
+        background: var(--panel);
+        border-right: 1px solid var(--border);
         overflow-y: auto; padding: 14px 12px;
     }
-    #queue h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint); margin: 0 0 10px; }
+    #queue h3 {
+        font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+        color: var(--text-dim); margin: 0 0 10px; font-weight: 700;
+    }
     .queue-focus {
-        display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin-bottom: 14px;
-        background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.3); border-radius: 8px;
+        display: flex; align-items: center; gap: 8px;
+        padding: 8px 10px; margin-bottom: 14px;
+        background: rgba(213,179,124,0.24);
+        border: 1px solid rgba(213,179,124,0.65);
+        border-radius: 8px;
     }
-    .queue-focus .qf-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
-    .queue-focus .qf-name { font-size: 13px; font-weight: 600; }
+    .queue-focus .qf-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: var(--focus); flex: none;
+        box-shadow: 0 0 0 3px rgba(213,179,124,0.28);
+    }
+    .queue-focus .qf-name { font-size: 13px; font-weight: 700; color: var(--text); }
     .queue-section-label {
-        font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin: 14px 0 6px;
-        padding-bottom: 4px; border-bottom: 1px dashed var(--border);
+        font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+        margin: 14px 0 6px; padding-bottom: 4px;
+        border-bottom: 1px dashed var(--border2);
+        font-weight: 700;
     }
-    .queue-section-label.strong { color: var(--strong); }
-    .queue-section-label.medium { color: var(--medium); }
-    .queue-section-label.weak   { color: var(--weak); }
+    .queue-section-label.strong { color: #4E6B63; }
+    .queue-section-label.medium { color: #8A6A1E; }
+    .queue-section-label.weak   { color: #6C6480; }
     .queue-item {
         display: flex; justify-content: space-between; align-items: center;
-        padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-bottom: 2px;
+        padding: 6px 8px; border-radius: 6px; cursor: pointer;
+        font-size: 12px; margin-bottom: 2px;
+        color: var(--text);
     }
-    .queue-item:hover { background: rgba(255,255,255,0.05); }
+    .queue-item:hover { background: rgba(167,178,154,0.22); }
     .queue-item .qi-conf { font-size: 10px; color: var(--text-faint); }
-    .queue-hidden { font-size: 11px; color: var(--text-faint); margin-top: 10px; cursor: pointer; }
-    .queue-hidden:hover { color: var(--text-dim); }
-    .queue-empty { font-size: 12px; color: var(--text-faint); padding: 10px 0; }
+    .queue-hidden {
+        font-size: 11px; color: var(--text-dim);
+        margin-top: 10px; cursor: pointer;
+    }
+    .queue-hidden:hover { color: var(--text); }
+    .queue-empty { font-size: 12px; color: var(--text-dim); padding: 10px 0; }
 
-    /* ===== Orbit（中央）===== */
-    #orbit-wrap { grid-area: orbit; position: relative; overflow: hidden; background: radial-gradient(circle at center, #12112a 0%, var(--bg) 75%); }
-    #orbit-canvas { position: absolute; inset: 0; }
-    #orbit-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-    #orbit-svg line { stroke: rgba(167,139,250,0.25); stroke-width: 1.2; }
-    #orbit-svg line.hi-conf { stroke: rgba(167,139,250,0.55); }
+    /* ============================================================
+       Orbit（中央）— 圖層順序
+       z-index 1：SVG 連線（最底）
+       z-index 2：節點卡片
+       z-index 3：浮動徽章（hint / layer badge）
+       z-index 4：loading 遮罩
+       ============================================================ */
+    #orbit-wrap {
+        grid-area: orbit; position: relative; overflow: hidden;
+        background: radial-gradient(circle at center, #FBF7ED 0%, var(--bg) 75%);
+        isolation: isolate;   /* 建立新的 stacking context，內部 z-index 不干擾外部 */
+    }
+    #orbit-svg {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        pointer-events: none;
+        z-index: 1;                 /* ← 連線在最底層 */
+    }
+    #orbit-canvas {
+        position: absolute; inset: 0;
+        z-index: 2;                 /* ← 節點在連線之上 */
+    }
+
+    #orbit-svg line { stroke: rgba(126,156,149,0.4); stroke-width: 1.2; }
+    #orbit-svg line.hi-conf { stroke: rgba(126,156,149,0.75); stroke-width: 1.6; }
+    #orbit-svg line.hop1 { stroke: rgba(167,178,154,0.65); }
+    #orbit-svg line.hop2 { stroke: rgba(126,156,149,0.55); }
+    #orbit-svg line.hop3 { stroke: rgba(167,160,184,0.5); }
+    #orbit-svg line.hop4 { stroke: rgba(217,183,167,0.5); }
+
     .orbit-node {
         position: absolute; transform: translate(-50%, -50%); cursor: pointer;
-        background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
+        background: var(--panel-2);
+        border: 1.5px solid var(--border2);
+        border-radius: 10px;
         padding: 8px 12px; font-size: 11px; text-align: center; min-width: 76px;
-        transition: border-color .15s, box-shadow .15s; user-select: none;
+        transition: border-color .15s, box-shadow .15s, transform .12s;
+        user-select: none;
+        color: var(--text);
+        z-index: 1;                 /* ← 在 canvas 內部確保 stacking */
     }
-    .orbit-node:hover { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(167,139,250,0.15); }
+    .orbit-node:hover {
+        border-color: var(--focus);
+        box-shadow: 0 0 0 4px rgba(213,179,124,0.22);
+        transform: translate(-50%, -50%) scale(1.03);
+        z-index: 10;                /* ← hover 時再拉到 canvas 內部最上層 */
+    }
     .orbit-node.is-focus {
-        border-color: var(--accent2); background: rgba(244,114,182,0.12);
-        box-shadow: 0 0 0 4px rgba(244,114,182,0.15); font-weight: 600;
+        border-color: var(--focus);
+        background: rgba(213,179,124,0.22);
+        box-shadow: 0 0 0 5px rgba(213,179,124,0.22);
+        font-weight: 700;
+        z-index: 5;                 /* ← 焦點節點比一般節點高 */
     }
-    .orbit-node .on-name { color: var(--text); }
-    .orbit-node .on-type { color: var(--text-faint); font-size: 9px; margin-top: 2px; }
+    .orbit-node.hop-1 { border-color: var(--hop1); background: rgba(167,178,154,0.14); }
+    .orbit-node.hop-2 { border-color: var(--hop2); background: rgba(126,156,149,0.14); }
+    .orbit-node.hop-3 { border-color: var(--hop3); background: rgba(167,160,184,0.14); }
+    .orbit-node.hop-4 { border-color: var(--hop4); background: rgba(217,183,167,0.14); }
+    .orbit-node .on-name { color: var(--text); font-weight: 600; }
+    .orbit-node .on-type {
+        color: var(--text-dim); font-size: 9px;
+        margin-top: 3px; letter-spacing: .04em;
+    }
     #orbit-hint {
         position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-        font-size: 10px; color: var(--text-faint); background: rgba(0,0,0,0.4);
-        padding: 4px 10px; border-radius: 12px; pointer-events: none;
+        font-size: 10px; color: var(--text);
+        background: rgba(251,247,237,0.95);
+        border: 1px solid var(--border2);
+        padding: 5px 12px; border-radius: 12px; pointer-events: none;
+        z-index: 3;
     }
     #orbit-layer-badge {
-        position: absolute; top: 10px; right: 14px; font-size: 10px; color: var(--text-dim);
-        background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 12px;
+        position: absolute; top: 10px; right: 14px;
+        font-size: 10px; color: var(--text); font-weight: 600;
+        background: rgba(251,247,237,0.95);
+        border: 1px solid var(--border2);
+        padding: 5px 12px; border-radius: 12px;
+        z-index: 3;
     }
     #orbit-status {
         position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-        flex-direction: column; gap: 12px; color: var(--text-dim); font-size: 12px; text-align: center;
+        flex-direction: column; gap: 12px;
+        color: var(--text-dim); font-size: 12px; text-align: center;
+        z-index: 4;
     }
     #orbit-status.hidden { display: none; }
     #orbit-status .spin {
-        width: 30px; height: 30px; border-radius: 50%; border: 3px solid rgba(167,139,250,0.15);
-        border-top-color: var(--accent); animation: spin .8s linear infinite;
+        width: 30px; height: 30px; border-radius: 50%;
+        border: 3px solid rgba(213,179,124,0.28);
+        border-top-color: var(--accent);
+        animation: spin .8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ===== Explain / Runtime（右）===== */
     #explain {
-        grid-area: explain; background: var(--panel); border-left: 1px solid var(--border);
+        grid-area: explain;
+        background: var(--panel);
+        border-left: 1px solid var(--border);
         overflow-y: auto; padding: 14px 14px;
     }
-    #explain h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint); margin: 0 0 10px; }
-    .explain-uncertainty { font-size: 12px; color: var(--medium); margin-bottom: 10px; }
-    .explain-abstain { font-size: 12px; color: var(--text-dim); line-height: 1.7; padding: 10px 0; }
-    .explain-group-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin: 12px 0 5px; }
-    .explain-group-label.support { color: var(--strong); }
-    .explain-group-label.contradiction { color: var(--danger); }
-    .explain-group-label.baseline { color: var(--text-faint); }
-    .explain-obs { font-size: 11px; color: var(--text-dim); padding: 2px 0; }
-    .explain-obs .eo-conf { color: var(--text-faint); }
-    .reasoning-path { font-size: 12px; line-height: 1.8; color: var(--text); word-break: break-word; }
-    .reasoning-path .rp-arrow { color: var(--text-faint); margin: 0 4px; }
-    .reasoning-empty { font-size: 11px; color: var(--text-faint); }
+    #explain h3 {
+        font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+        color: var(--text-dim); margin: 0 0 10px; font-weight: 700;
+    }
+    .explain-uncertainty {
+        font-size: 12px; color: #8A6A1E; margin-bottom: 10px;
+        padding: 6px 10px; background: rgba(213,179,124,0.16);
+        border-radius: 6px; border-left: 3px solid var(--medium);
+    }
+    .explain-abstain {
+        font-size: 12px; color: var(--text); line-height: 1.7; padding: 10px 0;
+    }
+    .explain-group-label {
+        font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+        margin: 12px 0 5px; font-weight: 700;
+    }
+    .explain-group-label.support { color: #4E6B63; }
+    .explain-group-label.contradiction { color: #8A3D2E; }
+    .explain-group-label.baseline { color: var(--text-dim); }
+    .explain-obs { font-size: 11px; color: var(--text); padding: 3px 0; }
+    .explain-obs .eo-conf { color: var(--text-faint); font-size: 10px; }
+    .reasoning-path {
+        font-size: 12px; line-height: 1.8; color: var(--text);
+        word-break: break-word;
+    }
+    .reasoning-path .rp-arrow { color: var(--text-dim); margin: 0 4px; }
+    .reasoning-empty { font-size: 11px; color: var(--text-dim); }
 
-    /* ===== Ask（問系統一個問題，在 #explain 裡面，同一個 grid-area）===== */
     #ask-box { border-top: 1px solid var(--border); padding-top: 4px; }
-    .ask-hint { font-size: 10px; color: var(--text-faint); margin-bottom: 6px; }
+    .ask-hint { font-size: 10px; color: var(--text-dim); margin-bottom: 6px; line-height: 1.55; }
     #ask-input {
-        width: 100%; box-sizing: border-box; resize: vertical; font: inherit; font-size: 12px;
-        background: var(--bg); color: var(--text); border: 1px solid var(--border);
+        width: 100%; box-sizing: border-box; resize: vertical;
+        font: inherit; font-size: 12px;
+        background: #FFFFFF; color: var(--text);
+        border: 1px solid var(--border2);
         border-radius: 6px; padding: 8px; margin-bottom: 6px;
     }
+    #ask-input::placeholder { color: var(--text-faint); opacity: 1; }
+    #ask-input:focus { outline: none; border-color: var(--accent2); }
     .ask-submit {
-        font-size: 11px; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border);
-        background: var(--panel); color: var(--text); cursor: pointer;
+        font-size: 11px; padding: 6px 14px; border-radius: 6px;
+        border: 1px solid var(--border2);
+        background: var(--panel); color: var(--text);
+        cursor: pointer; font-family: inherit; font-weight: 600;
     }
-    .ask-submit:hover { border-color: var(--medium); }
+    .ask-submit:hover { border-color: var(--accent2); background: rgba(167,178,154,0.2); }
     .ask-use-focus {
-        font-size: 9px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border);
-        background: transparent; color: var(--text-faint); cursor: pointer; margin-left: 6px;
+        font-size: 9px; padding: 2px 8px; border-radius: 4px;
+        border: 1px solid var(--border2);
+        background: transparent; color: var(--text-dim);
+        cursor: pointer; margin-left: 6px;
     }
-    .ask-use-focus:hover { color: var(--text); border-color: var(--medium); }
+    .ask-use-focus:hover { color: var(--text); border-color: var(--accent2); }
     #ask-result { margin-top: 10px; }
+    #inject-box { border-top: 1px solid var(--border); padding-top: 4px; margin-top: 4px; }
 
-    /* ===== Timeline（底部）===== */
-    #timeline { grid-area: timeline; background: var(--panel); border-top: 1px solid var(--border); padding: 10px 16px; overflow-x: auto; }
-    #timeline-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint); margin-bottom: 8px; }
-    #timeline-track { display: flex; align-items: flex-end; gap: 22px; height: 74px; min-width: max-content; padding-bottom: 4px; }
-    .tl-point { display: flex; flex-direction: column; align-items: center; cursor: pointer; min-width: 46px; }
+    /* ===== Timeline ===== */
+    #timeline {
+        grid-area: timeline;
+        background: var(--panel);
+        border-top: 1px solid var(--border);
+        padding: 10px 16px; overflow-x: auto;
+    }
+    #timeline-label {
+        font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+        color: var(--text-dim); margin-bottom: 8px; font-weight: 700;
+    }
+    #timeline-track {
+        display: flex; align-items: flex-end; gap: 22px;
+        height: 74px; min-width: max-content; padding-bottom: 4px;
+    }
+    .tl-point {
+        display: flex; flex-direction: column; align-items: center;
+        cursor: pointer; min-width: 46px;
+    }
     .tl-dot { border-radius: 50%; margin-bottom: 6px; }
-    .tl-epoch { font-size: 9px; color: var(--text-faint); white-space: nowrap; }
-    .tl-empty { font-size: 11px; color: var(--text-faint); }
+    .tl-epoch { font-size: 9px; color: var(--text-dim); white-space: nowrap; }
+    .tl-empty { font-size: 11px; color: var(--text-dim); }
     #timeline-detail {
-        font-size: 11px; color: var(--text-dim); margin-top: 6px; min-height: 14px;
+        font-size: 11px; color: var(--text);
+        margin-top: 6px; min-height: 14px;
     }
 
-    /* ===== Modal（沿用既有樣式，供筆記抽取／草稿審查用）===== */
+    /* ===== Modal ===== */
     .modal-overlay {
         display: none; position: fixed; inset: 0; z-index: 200;
-        background: rgba(0,0,0,0.6); align-items: center; justify-content: center;
+        background: rgba(63,67,63,0.42);
+        align-items: center; justify-content: center;
     }
     .modal-overlay.active { display: flex; }
     .modal-box {
         width: min(560px, 90vw); max-height: 85vh; overflow-y: auto;
-        background: var(--panel); border: 1px solid rgba(167,139,250,0.25); border-radius: 14px;
-        padding: 24px; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        background: var(--panel-2);
+        border: 1px solid var(--border2);
+        border-radius: 14px;
+        padding: 24px; position: relative;
+        box-shadow: 0 20px 60px rgba(63,67,63,0.25);
+        color: var(--text);
     }
     #review-modal .modal-box { width: min(680px, 92vw); }
-    .modal-box h2 { font-size: 16px; margin-bottom: 8px; color: var(--text); }
-    .modal-hint { font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.7; margin-bottom: 18px; }
-    .modal-hint code { background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px; }
-    .modal-hint b { color: var(--medium); }
-    .modal-close {
-        position: absolute; top: 14px; right: 14px; background: none; border: none;
-        color: rgba(255,255,255,0.4); font-size: 18px; cursor: pointer;
+    .modal-box h2 {
+        font-size: 16px; margin-bottom: 8px; color: var(--text); font-weight: 700;
     }
+    .modal-hint {
+        font-size: 12px; color: var(--text-dim);
+        line-height: 1.7; margin-bottom: 18px;
+    }
+    .modal-hint code {
+        background: rgba(167,178,154,0.28); padding: 1px 5px;
+        border-radius: 4px; color: var(--text);
+        font-family: var(--font-mono, monospace); font-size: 11px;
+    }
+    .modal-hint b { color: #8A6A1E; font-weight: 700; }
+    .modal-close {
+        position: absolute; top: 14px; right: 14px;
+        background: none; border: none;
+        color: var(--text-dim); font-size: 18px; cursor: pointer;
+    }
+    .modal-close:hover { color: var(--text); }
     .modal-field { margin-bottom: 14px; }
-    .modal-field label { display: block; font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 5px; letter-spacing: .5px; }
+    .modal-field label {
+        display: block; font-size: 11px; color: var(--text-dim);
+        margin-bottom: 5px; letter-spacing: .5px; font-weight: 600;
+    }
     .modal-field select, .modal-field input, .modal-field textarea {
-        width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 8px; padding: 9px 12px; color: var(--text); font-family: inherit;
+        width: 100%; background: #FFFFFF;
+        border: 1px solid var(--border2);
+        border-radius: 8px; padding: 9px 12px;
+        color: var(--text); font-family: inherit;
         font-size: 13px; resize: vertical; box-sizing: border-box;
     }
     .modal-field select:focus, .modal-field input:focus, .modal-field textarea:focus {
-        outline: none; border-color: rgba(167,139,250,0.5);
+        outline: none; border-color: var(--accent2);
+        box-shadow: 0 0 0 3px rgba(167,178,154,0.22);
     }
     .modal-provider-info {
-        font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 16px;
-        padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 8px;
+        font-size: 11px; color: var(--text);
+        margin-bottom: 16px; padding: 10px 12px;
+        background: rgba(167,178,154,0.18);
+        border-left: 3px solid var(--hop1);
+        border-radius: 6px;
     }
-    .modal-provider-info b { color: var(--accent); }
+    .modal-provider-info b { color: #4E6B63; }
     .modal-submit {
         width: 100%; padding: 11px; border-radius: 8px; border: none;
-        background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--panel);
-        font-weight: 600; font-size: 13px; cursor: pointer;
+        background: linear-gradient(135deg, var(--accent), #C99F64);
+        color: #FFFFFF;
+        font-weight: 700; font-size: 13px; cursor: pointer;
+        letter-spacing: .04em;
     }
+    .modal-submit:hover { filter: brightness(1.05); }
     .modal-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-    #extract-result, #review-compile-result { margin-top: 16px; font-size: 12px; }
-    .er-ok   { color: var(--strong); margin-bottom: 6px; }
-    .er-warn { color: var(--medium); margin-bottom: 4px; }
-    .er-err  { color: var(--danger); }
-    .er-info { color: rgba(255,255,255,0.4); margin-top: 8px; line-height: 1.6; }
+    #extract-result, #review-compile-result {
+        margin-top: 16px; font-size: 12px; color: var(--text);
+    }
+    .er-ok   { color: #4E6B63; margin-bottom: 6px; font-weight: 600; }
+    .er-warn { color: #8A6A1E; margin-bottom: 4px; }
+    .er-err  { color: #8A3D2E; }
+    .er-info { color: var(--text-dim); margin-top: 8px; line-height: 1.6; }
 
-    #review-empty { font-size: 12px; color: rgba(255,255,255,0.3); padding: 20px 0; text-align: center; }
+    #review-empty {
+        font-size: 12px; color: var(--text-dim);
+        padding: 20px 0; text-align: center;
+    }
     .review-item {
-        border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
-        padding: 12px 14px; margin-bottom: 10px; background: rgba(255,255,255,0.02);
+        border: 1px solid var(--border2); border-radius: 10px;
+        padding: 12px 14px; margin-bottom: 10px;
+        background: #FFFFFF;
     }
-    .review-item.is-approved { border-color: rgba(74,222,128,0.35); background: rgba(74,222,128,0.04); }
-    .review-item-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .review-item.is-approved {
+        border-color: rgba(126,156,149,0.6);
+        background: rgba(126,156,149,0.1);
+    }
+    .review-item-header {
+        display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+    }
     .review-type-badge {
-        font-size: 10px; padding: 2px 8px; border-radius: 10px; text-transform: uppercase;
-        letter-spacing: .5px; font-weight: 600;
+        font-size: 10px; padding: 2px 8px; border-radius: 10px;
+        text-transform: uppercase; letter-spacing: .5px; font-weight: 700;
     }
-    .review-type-badge.type-entity      { background: rgba(96,165,250,0.15); color: var(--weak); }
-    .review-type-badge.type-atom        { background: rgba(167,139,250,0.15); color: var(--accent); }
-    .review-type-badge.type-observation { background: rgba(251,191,36,0.15); color: var(--medium); }
-    .review-type-badge.type-source      { background: rgba(244,114,182,0.15); color: var(--accent2); }
-    .review-item-summary { font-size: 13px; color: var(--text); flex: 1; }
-    .review-item-status { font-size: 11px; color: rgba(255,255,255,0.35); }
-    .review-item-status.approved { color: var(--strong); }
+    .review-type-badge.type-entity      { background: rgba(167,160,184,0.28); color: #5A5270; }
+    .review-type-badge.type-atom        { background: rgba(167,178,154,0.32); color: #4E6B63; }
+    .review-type-badge.type-observation { background: rgba(213,179,124,0.32); color: #8A6A1E; }
+    .review-type-badge.type-source      { background: rgba(217,183,167,0.4); color: #8A5A42; }
+    .review-item-summary { font-size: 13px; color: var(--text); flex: 1; font-weight: 500; }
+    .review-item-status { font-size: 11px; color: var(--text-dim); }
+    .review-item-status.approved { color: #4E6B63; font-weight: 600; }
     .review-item-actions { display: flex; gap: 8px; margin-top: 8px; }
     .review-item-actions button {
-        font-size: 11px; padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
-        background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.7); cursor: pointer; font-family: inherit;
+        font-size: 11px; padding: 5px 12px; border-radius: 6px;
+        border: 1px solid var(--border2);
+        background: var(--panel-2); color: var(--text);
+        cursor: pointer; font-family: inherit; font-weight: 500;
     }
-    .review-item-actions button.btn-approve:hover { border-color: var(--strong); color: var(--strong); }
-    .review-item-actions button.btn-reject:hover  { border-color: var(--danger); color: var(--danger); }
+    .review-item-actions button.btn-approve:hover {
+        border-color: var(--strong); color: #4E6B63;
+        background: rgba(126,156,149,0.16);
+    }
+    .review-item-actions button.btn-reject:hover {
+        border-color: var(--danger); color: #8A3D2E;
+        background: rgba(201,132,118,0.16);
+    }
     .review-item-detail {
-        display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.08);
-        font-size: 11px; color: rgba(255,255,255,0.5); white-space: pre-wrap; max-height: 200px; overflow-y: auto;
-        font-family: 'Consolas', monospace;
+        display: none; margin-top: 10px; padding-top: 10px;
+        border-top: 1px dashed var(--border2);
+        font-size: 11px; color: var(--text);
+        white-space: pre-wrap; max-height: 200px; overflow-y: auto;
+        font-family: var(--font-mono, 'Consolas'), monospace;
     }
     .review-item-detail.active { display: block; }
 </style>
@@ -332,12 +528,28 @@
             <div class="ask-hint" id="ask-hint">目前焦點：<span id="ask-focus-name">（未選取實體）</span>
                 <button class="ask-use-focus" onclick="useFocusAsQuery()" title="把輸入框換成焦點實體的名稱，保證命中比對">帶入焦點名稱</button>
             </div>
-            <div class="ask-hint" style="opacity:.75">系統目前用「子字串比對」找 Entity：你打的整段文字必須完整包含在
+            <div class="ask-hint">系統目前用「子字串比對」找 Entity：你打的整段文字必須完整包含在
                 某個 Entity 的名稱／uid／別名裡面才會命中，不是自然語言問答比對——
                 打太長的句子通常會直接棄權（no_matching_atom）。</div>
             <textarea id="ask-input" rows="2" placeholder="輸入知識庫裡實際存在的實體名稱或關鍵字…"></textarea>
             <button class="ask-submit" id="ask-submit-btn" onclick="askSystem()">送出</button>
             <div id="ask-result"></div>
+        </div>
+
+        <div id="inject-box">
+            <h3 style="margin-top:18px;">關鍵詞注入（多跳關聯鏈）</h3>
+            <div class="ask-hint">以一個實體為起點，沿關聯鏈多跳展開，把整條鏈路的敘事注入 LLM——
+                跟上面「問系統一個問題」不同：那個是查詢文字比對單一 Atom，這個是主動沿圖多跳擴散。</div>
+            <div style="display:flex;gap:6px;margin-bottom:6px;">
+                <input id="inject-entity" placeholder="實體名稱，例如「大型人工智慧模型」" style="flex:1;box-sizing:border-box;font:inherit;font-size:12px;background:#FFFFFF;color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;"/>
+                <button class="ask-use-focus" onclick="useFocusAsInjectEntity()" title="用目前焦點實體當起點">用焦點</button>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;font-size:10px;color:var(--text-dim)">
+                <label>最多跳數 <input id="inject-hops" type="number" min="1" max="5" value="3" style="width:36px;background:#FFFFFF;color:var(--text);border:1px solid var(--border2);border-radius:4px;"/></label>
+                <label>取前 <input id="inject-topk" type="number" min="1" max="10" value="6" style="width:36px;background:#FFFFFF;color:var(--text);border:1px solid var(--border2);border-radius:4px;"/> 條</label>
+            </div>
+            <button class="ask-submit" id="inject-submit-btn" onclick="injectConcept()">注入</button>
+            <div id="inject-result"></div>
         </div>
     </div>
 
@@ -397,9 +609,6 @@
 
 <script type="module">
 
-// ============================================================
-//  API 位址（沿用 HUD 設定裡的 api_server，沒有就用預設值）
-// ============================================================
 const API_BASE = (() => {
     try {
         const cfg = JSON.parse(localStorage.getItem('llm-wiki-config') || '{}');
@@ -412,17 +621,21 @@ function getAiConfig() {
     catch { return {}; }
 }
 
-// ============================================================
-//  全域狀態
-// ============================================================
-let focusUid = null;        // 目前 Orbit 焦點
-let searchOrigin = null;    // 最後一次「搜尋」設定的起點，只有下一次搜尋才會重置
-let currentLayer = 2;       // 目前展開到第幾層（滾輪 +/-1，不是縮放）
-const MAX_LAYER_CLIENT = 6; // 用戶端上限，伺服器端 policy.yaml 的 max_layer 是真正的硬上限
+let focusUid = null;
+let searchOrigin = null;
+let currentLayer = 2;
+const MAX_LAYER_CLIENT = 6;
 
-// ============================================================
-//  小工具
-// ============================================================
+const HOP_COLORS = {
+    0: 'var(--focus)',
+    1: 'var(--hop1)',
+    2: 'var(--hop2)',
+    3: 'var(--hop3)',
+};
+function hopClass(layerIdx) {
+    return layerIdx === 0 ? 'is-focus' : `hop-${Math.min(layerIdx, 4)}`;
+}
+
 async function fetchJson(path) {
     const res = await fetch(API_BASE + path);
     const data = await res.json().catch(() => ({}));
@@ -434,19 +647,6 @@ function escapeHtml(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-const TYPE_COLOR_CACHE = {};
-function colorForType(type) {
-    if (TYPE_COLOR_CACHE[type]) return TYPE_COLOR_CACHE[type];
-    let hash = 0;
-    for (let i = 0; i < String(type).length; i++) hash = (hash * 31 + type.charCodeAt(i)) >>> 0;
-    const color = `hsl(${hash % 360}, 60%, 68%)`;
-    TYPE_COLOR_CACHE[type] = color;
-    return color;
-}
-
-// ============================================================
-//  Orbit：載入 + 佈局 + 畫圖
-// ============================================================
 async function loadOrbit(uid, { isNewSearch = false } = {}) {
     focusUid = uid;
     if (isNewSearch) searchOrigin = uid;
@@ -465,12 +665,10 @@ async function loadOrbit(uid, { isNewSearch = false } = {}) {
         renderQueue(data.queue);
     } catch (e) {
         document.getElementById('orbit-status-msg').innerHTML =
-            `無法讀取：<b>${escapeHtml(e.message)}</b><br><span style="opacity:.6;font-size:11px">確認 Python/Node 服務都已啟動</span>`;
+            `無法讀取：<b>${escapeHtml(e.message)}</b><br><span style="font-size:11px">確認 Python/Node 服務都已啟動</span>`;
         return;
     }
 
-    // Explain / Timeline 跟著焦點換；loadReasoningPath 特意放在 loadExplain 內部、
-    // DOM 元素建好之後才呼叫（不是在這裡並行呼叫）——見 loadExplain() 結尾的說明。
     loadExplain(uid);
     loadTimeline(uid);
 }
@@ -486,9 +684,13 @@ function renderOrbit(data) {
     const ringSpacing = Math.max(60, Math.min(cx, cy) / (data.layers.length || 1) * 0.82);
 
     const positions = {};
+    const layerOf = {};
     data.layers.forEach((layerNodes, layerIdx) => {
         if (layerIdx === 0) {
-            if (layerNodes[0]) positions[layerNodes[0].uid] = { x: cx, y: cy };
+            if (layerNodes[0]) {
+                positions[layerNodes[0].uid] = { x: cx, y: cy };
+                layerOf[layerNodes[0].uid] = 0;
+            }
             return;
         }
         const radius = layerIdx * ringSpacing;
@@ -496,30 +698,36 @@ function renderOrbit(data) {
         layerNodes.forEach((node, i) => {
             const angle = (2 * Math.PI * i / n) - Math.PI / 2;
             positions[node.uid] = { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
+            layerOf[node.uid] = layerIdx;
         });
     });
 
-    // 連線（先畫，疊在卡片下面）
     for (const edge of data.edges) {
         const a = positions[edge.from], b = positions[edge.to];
         if (!a || !b) continue;
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
         line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
-        if (edge.score >= 0.6) line.setAttribute('class', 'hi-conf');
+
+        const toLayer = layerOf[edge.to];
+        const fromLayer = layerOf[edge.from];
+        const hopIdx = Math.max(toLayer ?? 1, fromLayer ?? 1);
+        const hopCls = hopIdx === 1 ? 'hop1'
+                     : hopIdx === 2 ? 'hop2'
+                     : hopIdx === 3 ? 'hop3'
+                     : 'hop4';
+        line.setAttribute('class', hopCls + (edge.score >= 0.6 ? ' hi-conf' : ''));
         svg.appendChild(line);
     }
 
-    // 節點卡片
-    data.layers.forEach((layerNodes) => {
+    data.layers.forEach((layerNodes, layerIdx) => {
         for (const node of layerNodes) {
             const pos = positions[node.uid];
             if (!pos) continue;
             const div = document.createElement('div');
-            div.className = 'orbit-node' + (node.uid === data.center.uid ? ' is-focus' : '');
+            div.className = 'orbit-node ' + hopClass(layerIdx);
             div.style.left = pos.x + 'px';
             div.style.top = pos.y + 'px';
-            div.style.borderTopColor = colorForType(node.type);
             div.innerHTML = `<div class="on-name">${escapeHtml(node.name)}</div><div class="on-type">${escapeHtml(node.type)}</div>`;
             div.addEventListener('click', () => loadOrbit(node.uid));
             canvas.appendChild(div);
@@ -538,9 +746,6 @@ function onOrbitWheel(ev) {
 
 window.addEventListener('resize', () => { if (focusUid) loadOrbit(focusUid); });
 
-// ============================================================
-//  Activation Queue（左側面板）
-// ============================================================
 function renderQueue(queue) {
     const body = document.getElementById('queue-body');
     const sections = [
@@ -570,9 +775,6 @@ function renderQueue(queue) {
 }
 window.loadOrbit = loadOrbit;
 
-// ============================================================
-//  Explain / Runtime（右側面板）
-// ============================================================
 async function loadExplain(uid) {
     const body = document.getElementById('explain-body');
     body.innerHTML = '<div class="reasoning-empty">載入中…</div>';
@@ -581,9 +783,9 @@ async function loadExplain(uid) {
         if (d.abstained) {
             body.innerHTML =
                 `<div class="explain-abstain">系統棄權：目前證據不足以支撐可靠判斷（uncertainty ${d.uncertainty}）。</div>` +
-                `<div class="explain-group-label" style="color:var(--text-faint)">Reasoning</div>` +
+                `<div class="explain-group-label baseline">Reasoning</div>` +
                 `<div class="reasoning-path" id="reasoning-path-inline"><span class="reasoning-empty">載入中…</span></div>`;
-            loadReasoningPath();  // 同樣要等 DOM 寫進去之後才呼叫，見下面 non-abstained 分支的說明
+            loadReasoningPath();
             return;
         }
         const group = (label, cls, items) => {
@@ -596,11 +798,8 @@ async function loadExplain(uid) {
             group('Support', 'support', d.support) +
             group('Contradiction', 'contradiction', d.contradiction) +
             group('Baseline', 'baseline', d.baseline) +
-            `<div class="explain-group-label" style="color:var(--text-faint)">Reasoning</div>` +
+            `<div class="explain-group-label baseline">Reasoning</div>` +
             `<div class="reasoning-path" id="reasoning-path-inline"><span class="reasoning-empty">載入中…</span></div>`;
-        // 一定要等上面這行把 #reasoning-path-inline 寫進 DOM 之後才呼叫，
-        // 不能在 loadOrbit() 裡跟 loadExplain() 並行呼叫——那樣這個 element 有時候還不存在
-        // （之前踩過這個時序 bug：Explain 的 fetch 比較慢時，找不到元素直接變成 no-op）。
         loadReasoningPath();
     } catch (e) {
         body.innerHTML = `<div class="er-err">載入失敗：${escapeHtml(e.message)}</div>`;
@@ -614,6 +813,55 @@ function useFocusAsQuery() {
 }
 window.useFocusAsQuery = useFocusAsQuery;
 
+function useFocusAsInjectEntity() {
+    const focusName = (document.getElementById('ask-focus-name')?.textContent || '').trim();
+    if (!focusName || focusName === '（未選取實體）') return;
+    document.getElementById('inject-entity').value = focusName;
+}
+window.useFocusAsInjectEntity = useFocusAsInjectEntity;
+
+async function injectConcept() {
+    const entity = document.getElementById('inject-entity').value.trim();
+    const maxHops = parseInt(document.getElementById('inject-hops').value, 10) || 3;
+    const topK = parseInt(document.getElementById('inject-topk').value, 10) || 6;
+    const btn = document.getElementById('inject-submit-btn');
+    const result = document.getElementById('inject-result');
+    if (!entity) return;
+
+    btn.disabled = true;
+    result.innerHTML = '<div class="reasoning-empty">沿關聯鏈展開中…</div>';
+    try {
+        const res = await fetch(API_BASE + '/api/epistemic/concept-injection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ entity, max_hops: maxHops, top_k: topK }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            result.innerHTML = `<div class="er-err">${escapeHtml(data.detail || res.statusText)}</div>`;
+            return;
+        }
+
+        const badge = (typeof PluginBadge === 'function') ? PluginBadge(data.plugin) : '';
+        const chainHtml = (data.chain || []).map(c =>
+            `<div class="explain-obs">${escapeHtml(c.narrative)} <span class="eo-conf">conf ${c.confidence}</span></div>`
+        ).join('') || '<div class="reasoning-empty">沒有找到信心足夠的關聯鏈（門檻見 policy.yaml activation_queue.medium_min）。</div>';
+
+        result.innerHTML = `
+            ${badge}
+            <div class="explain-group-label support">關聯鏈（${(data.chain || []).length}）</div>
+            ${chainHtml}
+            <div class="explain-group-label baseline" style="margin-top:10px">LLM 輸出${data.dry_run ? '（dry-run，未設定 ANTHROPIC_API_KEY）' : ''}</div>
+            <div class="explain-obs" style="white-space:pre-wrap">${escapeHtml(data.answer || '')}</div>
+        `;
+    } catch (e) {
+        result.innerHTML = `<div class="er-err">注入失敗：${escapeHtml(e.message)}</div>`;
+    } finally {
+        btn.disabled = false;
+    }
+}
+window.injectConcept = injectConcept;
+
 async function askSystem() {
     const input = document.getElementById('ask-input');
     const btn = document.getElementById('ask-submit-btn');
@@ -621,14 +869,6 @@ async function askSystem() {
     const query = input.value.trim();
     if (!query) return;
 
-    // 注意：activation_engine.find_candidate_entities() 的比對方向是
-    // 「你打的整段查詢文字必須是某個 Entity 的 name/uid/alias 的子字串」
-    // （程式碼是 `query in entity_name`，不是反過來）。所以這裡完全不去
-    // 動使用者打的文字——把焦點實體名稱硬塞進去只會讓查詢變長、更難符合
-    // 子字串比對（先前一版錯誤地這樣做過）。要保證命中焦點實體，請按旁邊
-    // 「帶入焦點名稱」按鈕，把輸入框直接換成實體名稱本身再送出。
-    // Query Contract 的 atom 欄位是精確指定「某一條 Atom（關係）」用的，
-    // 焦點是 Entity uid，兩者是不同 id 命名空間，這裡不帶這個欄位。
     btn.disabled = true;
     result.innerHTML = '<div class="reasoning-empty">送出中…</div>';
     try {
@@ -688,9 +928,6 @@ async function loadReasoningPath() {
     }
 }
 
-// ============================================================
-//  Timeline（底部）
-// ============================================================
 async function loadTimeline(uid) {
     const track = document.getElementById('timeline-track');
     const detail = document.getElementById('timeline-detail');
@@ -705,7 +942,9 @@ async function loadTimeline(uid) {
         track.innerHTML = d.timeline.map(t => {
             const total = t.support + t.contradict + t.neutral;
             const size = Math.min(22, 10 + total * 3);
-            const color = t.support > t.contradict ? 'var(--strong)' : t.contradict > t.support ? 'var(--danger)' : 'var(--weak)';
+            const color = t.support > t.contradict ? 'var(--strong)'
+                        : t.contradict > t.support ? 'var(--danger)'
+                        : 'var(--weak)';
             return `
                 <div class="tl-point" onclick="showTimelinePoint('${escapeHtml(t.epoch)}', ${t.support}, ${t.contradict}, ${t.neutral})">
                     <div class="tl-dot" style="width:${size}px;height:${size}px;background:${color}"></div>
@@ -722,9 +961,6 @@ window.showTimelinePoint = (epoch, support, contradict, neutral) => {
         `${epoch}：支持 ${support}、反駁 ${contradict}、中性 ${neutral}`;
 };
 
-// ============================================================
-//  搜尋
-// ============================================================
 let searchDebounce = null;
 async function onSearchInput() {
     const q = document.getElementById('search-input').value.trim();
@@ -779,9 +1015,6 @@ document.addEventListener('click', (ev) => {
     if (!ev.target.closest('#search-wrap')) document.getElementById('search-results').classList.remove('active');
 });
 
-// ============================================================
-//  治理提示（頂欄小按鈕，不做獨立儀表板頁面）
-// ============================================================
 async function loadGovernanceHint() {
     try {
         const d = await fetchJson('/api/epistemic/governance-summary');
@@ -791,12 +1024,9 @@ async function loadGovernanceHint() {
             btn.textContent = `⚠ ${d.debt_count} 個知識債務、${d.mediation_count} 個矛盾提案`;
             btn.style.display = '';
         }
-    } catch (e) { /* 治理提示載入失敗不影響主功能，安靜略過 */ }
+    } catch (e) { }
 }
 
-// ============================================================
-//  筆記抽取 Modal（沿用既有邏輯）
-// ============================================================
 async function openExtractModal() {
     document.getElementById('extract-modal').classList.add('active');
     document.getElementById('extract-result').innerHTML = '';
@@ -810,7 +1040,7 @@ async function openExtractModal() {
     if (provider === 'llama') {
         providerInfo.innerHTML = `目前使用：<b>llama.cpp</b>（本機）　${cfg.llama_host || 'http://127.0.0.1'}:${cfg.llama_port || '8080'}`;
     } else {
-        providerInfo.innerHTML = `目前使用：<b>${labels[provider] || provider}</b>　<span style="opacity:.6">要換 LLM 到設定頁調整</span>`;
+        providerInfo.innerHTML = `目前使用：<b>${labels[provider] || provider}</b>　要換 LLM 到設定頁調整`;
     }
 
     const select = document.getElementById('extract-source-select');
@@ -874,9 +1104,6 @@ async function submitExtraction() {
     finally { btn.disabled = false; btn.textContent = '開始抽取'; }
 }
 
-// ============================================================
-//  草稿審查 Modal（沿用既有邏輯）
-// ============================================================
 async function openReviewModal() {
     document.getElementById('review-modal').classList.add('active');
     document.getElementById('review-compile-result').innerHTML = '';
@@ -967,15 +1194,6 @@ async function runCompile() {
     finally { btn.disabled = false; btn.textContent = '編譯已核准的草稿'; }
 }
 
-// ============================================================
-//  把 inline onclick/onchange 用到的函式掛到 window 上
-//  ------------------------------------------------------------
-//  這個檔案的 <script type="module"> 裡，頂層 function 宣告只在模組自己的作用域裡，
-//  不會自動變成 window.xxx；但 HTML 屬性寫的 onclick="openExtractModal()" 是在
-//  全域作用域執行，找不到模組裡的函式就會靜默失敗（按了完全沒反應，主控台會有
-//  "xxx is not defined"）。這是先前 panel-m-map.html 開發時踩過的坑，這裡從一開始
-//  就把清單列好，新增按鈕記得也要加進來。
-// ============================================================
 window.openExtractModal = openExtractModal;
 window.closeExtractModal = closeExtractModal;
 window.onExtractSourceChange = onExtractSourceChange;
@@ -987,15 +1205,11 @@ window.approveDraft = approveDraft;
 window.rejectDraft = rejectDraft;
 window.runCompile = runCompile;
 
-// ============================================================
-//  初始化
-// ============================================================
 document.getElementById('search-input').addEventListener('input', onSearchInput);
 document.getElementById('orbit-wrap').addEventListener('wheel', onOrbitWheel, { passive: false });
 
 async function init() {
     loadGovernanceHint();
-    // 預設焦點：拿第一個存在的 Entity 當起點（不用使用者手動搜尋才有東西可看）
     try {
         const d = await fetchJson('/api/epistemic/search?q=');
         if (d.entities.length) {
@@ -1005,7 +1219,7 @@ async function init() {
         }
     } catch (e) {
         document.getElementById('orbit-status-msg').innerHTML =
-            `無法連線：<b>${escapeHtml(e.message)}</b><br><span style="opacity:.6;font-size:11px">確認 Python/Node 服務都已啟動（npm run dev:all）</span>`;
+            `無法連線：<b>${escapeHtml(e.message)}</b><br><span style="font-size:11px">確認 Python/Node 服務都已啟動（npm run dev:all）</span>`;
     }
 }
 init();

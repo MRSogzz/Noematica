@@ -45,7 +45,7 @@ const SlotCell = Object.assign(
            text-align:center;padding:2px 0">${m.name}</div>
       <div style="display:flex;justify-content:space-between;width:100%;font-size:9px">
         <span style="color:rgba(255,255,255,0.3)">#${String(m.id).padStart(2, '0')}</span>
-        <span style="color:${sc}">${m.status === 'DONE' ? 'DONE' : m.status === 'BLOCKED' ? '✗ BLOCKED' : '… WIP'}</span>
+        <span style="color:${sc}">${m.status === 'DONE' ? '✓ DONE' : m.status === 'BLOCKED' ? '✗ BLOCKED' : '… WIP'}</span>
       </div>
     </div>`;
   },

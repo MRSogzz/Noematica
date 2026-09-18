@@ -18,7 +18,7 @@
        items: modules,
        renderItem: (m) => SlotCell(m, { pipeline, highlight: highlightMap[m.id] }),
        loading: !modules.length,
-       emptyIcon: '',
+       emptyIcon: '🔍',
        emptyText: '此分類無模組',
        gridId: 'b-grid',        // 選填，需要用 id 選取容器時才給
      }));
@@ -29,7 +29,7 @@ const GridLayout = {
     items,
     renderItem,
     loading = false,
-    emptyIcon = '',
+    emptyIcon = '📭',
     emptyText = '無資料',
     emptyHint = '',
     gridId = '',

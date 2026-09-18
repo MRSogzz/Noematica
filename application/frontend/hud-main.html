@@ -123,7 +123,7 @@
   <div class="modal-backdrop" id="backdrop" onclick="closeModal()"></div>
   <div class="modal" id="modal">
     <!-- 左上／左下／右下三個裝飾角落：固定尺寸、絕對定位，不受 .modal
-         尺寸影響。CSS 預設 display:none，只有 hud-core.js 確認角落圖示
+         尺寸影響。CSS 預設 display:none，只有 shell/modal-shell.js 確認角落圖示
          （_badge.png/_close.png）預載完成、幫 .modal 掛上 .skin-ready
          之後才會顯示——面板剛開啟、圖片還沒載完的當下，這幾個 div 完全
          不會有任何視覺效果，跟 F3/F4 長得一模一樣。左上（nw-badge）：
@@ -194,22 +194,26 @@
 </div>
 
 
-<!-- ── Scripts（載入順序：core → panels → panel-h → utils → settings）─── -->
-<script src="hud-core.js"></script>
+<!-- ── Scripts（載入順序：shell → layouts/ui → panels → panel-h → utils → settings）─── -->
+<!-- WorkspaceShell：四層架構裡 Header/Sidebar/Toolbar/InfoPanel 共用的部分
+     （Content 交給 registry/panel-registry.js 動態載入，不在這裡）-->
+<script src="shell/modal-shell.js"></script>
+<script src="shell/sidebar.js"></script>
+<script src="shell/toolbar.js"></script>
+<script src="shell/info-panel.js"></script>
 <!-- Container/View 架構要用的共用 Web Component（PanelShell/PanelHeader） -->
-<script type="module" src="components/panel-shell.js"></script>
-<script type="module" src="components/panel-header.js"></script>
+<script type="module" src="web-components/panel-shell.js"></script>
+<script type="module" src="web-components/panel-header.js"></script>
 <!-- 四層架構：Layout 層（排列/空狀態/響應式）-->
 <script src="layouts/grid-layout.js"></script>
 <script src="layouts/list-layout.js"></script>
-<!-- 四層架構：Component 層（單一格子/卡片長什麼樣）-->
-<script src="panel-components/slot-cell.js"></script>
-<script src="panel-components/milestone-card.js"></script>
-<script src="panel-components/note-card.js"></script>
-<script src="panel-components/commit-row.js"></script>
-<script src="panel-components/status-file-row.js"></script>
-<script src="panel-components/doc-item.js"></script>
-<script src="hud-panels.js"></script>
+<!-- 四層架構：Content 內的單一格子/卡片長什麼樣 -->
+<script src="ui/slot-cell.js"></script>
+<script src="ui/milestone-card.js"></script>
+<script src="ui/note-card.js"></script>
+<script src="ui/commit-row.js"></script>
+<script src="ui/status-file-row.js"></script>
+<script src="ui/doc-item.js"></script>
 <script src="panel-h.js"></script>
 <script src="hud-utils.js"></script>
 <script src="hud-settings.js"></script>

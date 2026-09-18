@@ -32,7 +32,7 @@ Vanilla Web Components，落地 `NUG.md` 定義的知識概念映射規則。跟
 ## 使用方式
 
 ```html
-<script type="module" src="components/index.js"></script>
+<script type="module" src="web-components/index.js"></script>
 
 <entity-card name="fed_funds_rate" type="macro_variable"
   domains="總經,貨幣政策" description="聯邦基金利率...">
@@ -45,7 +45,7 @@ Vanilla Web Components，落地 `NUG.md` 定義的知識概念映射規則。跟
 </evidence-card>
 ```
 
-只需要單一元件時，可以只 import 那一個檔案（例如 `import './components/activation-badge.js'`），不用整包 `index.js` 一起載入。`evidence-card.js` 內部依賴 `activation-badge.js`，已經在檔案裡自己 import，不用手動處理依賴順序。
+只需要單一元件時，可以只 import 那一個檔案（例如 `import './web-components/activation-badge.js'`），不用整包 `index.js` 一起載入。`evidence-card.js` 內部依賴 `activation-badge.js`，已經在檔案裡自己 import，不用手動處理依賴順序。
 
 ---
 
@@ -54,7 +54,7 @@ Vanilla Web Components，落地 `NUG.md` 定義的知識概念映射規則。跟
 **Demo 頁面**（肉眼檢查渲染效果，用真實資料樣本，不是假占位資料）：
 
 ```
-application/frontend/components/demo/demo.html
+application/frontend/web-components/demo/demo.html
 ```
 
 用瀏覽器直接開（或起個本地伺服器），會看到四種元件的完整狀態展示，包含刻意測試的邊界案例（Hidden 分級不畫東西、非法 stance 值正規化成中立、未知 Entity 類型 fallback 成預設圖示）。
@@ -76,12 +76,15 @@ npm test
 ## 檔案結構
 
 ```
-components/
+web-components/
 ├── nug-tokens.js       — 共用映射表（單一事實來源）
 ├── activation-badge.js
 ├── stance-icon.js
 ├── entity-card.js
 ├── evidence-card.js
+├── panel-shell.js       — 統一 loading/error/empty 外殼（Container/View 架構共用）
+├── panel-header.js      — 可拉伸圖片標題
+├── f3-workspace.js      — F3 測試套件監控面板（Shadow DOM 包整個內容）
 ├── index.js             — 一次 import 全部元件
 ├── package.json
 ├── test_components.mjs  — 自動化功能測試
