@@ -37,6 +37,7 @@ import correlation_engine as ce  # noqa: E402
 import confidence_engine as cfe  # noqa: E402  # ce 已經被 correlation_engine 佔用，這裡改用 cfe
 import graph_engine as ge  # noqa: E402
 import inbox_review as ir  # noqa: E402
+import concept_injection_engine as cje  # noqa: E402
 from common import scan_layer, load_entities, load_atoms, load_observations, parse_md, epoch_to_date, read_tsv  # noqa: E402
 
 
@@ -497,6 +498,46 @@ def handle_reasoning_path(from_uid: str, to_uid: str) -> dict:
         "path": [{"uid": u, "name": entity_by_uid.get(u, {}).get("name", u)} for u in path_uids],
         "found": True,
     }
+
+
+def handle_concept_injection(payload: dict) -> dict:
+    """關鍵詞注入：從指定實體出發，沿知識圖譜多跳展開高信心關聯鏈，交給 LLM 總結。
+
+    payload: {
+        "entity":    str（必填，實體名稱 / uid / alias 皆可）,
+        "max_hops":  int（選填，預設 3，上限 5）,
+        "top_k":     int（選填，預設 6，上限 10）,
+        "ai_config": dict（選填，前端設定頁的 llm-wiki-config 原封不動傳進來，
+                           決定要用哪個 LLM provider：anthropic / openai / llama / custom；
+                           不給就用預設 anthropic）
+    }
+    回傳：{ entity, center_uid, chain, answer, dry_run, error, provider, prompt?, plugin }
+    """
+    entity = (payload.get("entity") or "").strip()
+    if not entity:
+        raise ValueError("entity 不能是空字串")
+
+    try:
+        max_hops = int(payload.get("max_hops") or 3)
+    except (TypeError, ValueError):
+        raise ValueError("max_hops 必須是整數")
+    max_hops = max(1, min(max_hops, 5))
+
+    try:
+        top_k = int(payload.get("top_k") or 6)
+    except (TypeError, ValueError):
+        raise ValueError("top_k 必須是整數")
+    top_k = max(1, min(top_k, 10))
+
+    ai_config = payload.get("ai_config") or {}
+
+    return cje.inject_concept(
+        REPO_ROOT,
+        entity=entity,
+        max_hops=max_hops,
+        top_k=top_k,
+        ai_config=ai_config,
+    )
 
 
 def handle_timeline(uid: str) -> dict:

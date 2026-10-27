@@ -141,6 +141,18 @@ def correlate(payload: dict):
         raise _internal_error(e)
 
 
+@app.post("/concept-injection")
+def concept_injection(payload: dict):
+    """關鍵詞注入：從指定實體出發，沿知識圖譜多跳展開高信心關聯鏈，交給 LLM 總結。
+    payload 見 adapter.handle_concept_injection 的 docstring。"""
+    try:
+        return adapter.handle_concept_injection(payload)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:  # noqa: BLE001
+        raise _internal_error(e)
+
+
 @app.get("/inbox")
 def list_inbox():
     """列出 0_Inbox/ 裡所有 compiler 認得的草稿，給前端審查列表用。"""

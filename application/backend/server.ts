@@ -1294,6 +1294,15 @@ app.post('/api/epistemic/correlate', async (req: Request, res: Response) => {
   await proxyToEpistemic('/correlate', req.body, res);
 });
 
+/**
+ * POST /api/epistemic/concept-injection
+ * Body: { entity, max_hops?, top_k? }
+ * 關鍵詞注入：以 entity 為起點多跳展開關聯鏈，回傳 { chain, answer, dry_run, plugin }。
+ */
+app.post('/api/epistemic/concept-injection', async (req: Request, res: Response) => {
+  await proxyToEpistemic('/concept-injection', req.body, res);
+});
+
 // ── Inbox 審查：列表 / 查看 / 核准 / 拒絕 / 編譯 ──────────────────────────────
 // 這些是 GET/POST 混合，沒辦法全部套用 proxyToEpistemic（那個 helper 固定用 POST），
 // 所以個別寫，但邏輯一樣：轉發、原樣回傳狀態碼跟 body，連線失敗回 502。
