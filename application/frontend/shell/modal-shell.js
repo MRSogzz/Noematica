@@ -67,6 +67,7 @@ function openModal(id) {
   }
 
   // 重置 InfoPanel（見 shell/info-panel.js 的 renderDetail()）
+  $('m-detail').style.display   = '';
   $('m-detail-icon').textContent = '📦';
   $('m-detail-name').textContent = '選擇一個項目';
   $('m-detail-tag').textContent  = '—';
